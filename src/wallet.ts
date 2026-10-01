@@ -17,6 +17,7 @@ export interface WebZjsReceivedPayment {
 
 export interface WebZjsReceivedPaymentResponse {
   payments: readonly WebZjsReceivedPayment[];
+  free?: () => void;
 }
 
 export interface WebZjsWalletLike {
@@ -38,20 +39,24 @@ export class WebZjsPaymentSource {
       this.accountId
     );
 
-    return response.payments.map((payment) => ({
-      paymentId: payment.payment_id,
-      txid: payment.txid,
-      amountZatoshis: payment.value,
-      ...(payment.memo === undefined
-        ? {}
-        : { memo: payment.memo }),
-      ...(payment.block_height === undefined
-        ? {}
-        : { blockHeight: payment.block_height }),
-      confirmations: payment.confirmations,
-      status: mapWebZjsStatus(payment.status),
-      pool: payment.pool
-    }));
+    try {
+      return response.payments.map((payment) => ({
+        paymentId: payment.payment_id,
+        txid: payment.txid,
+        amountZatoshis: payment.value,
+        ...(payment.memo === undefined
+          ? {}
+          : { memo: payment.memo }),
+        ...(payment.block_height === undefined
+          ? {}
+          : { blockHeight: payment.block_height }),
+        confirmations: payment.confirmations,
+        status: mapWebZjsStatus(payment.status),
+        pool: payment.pool
+      }));
+    } finally {
+      response.free?.();
+    }
   }
 }
 

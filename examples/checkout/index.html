@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b1020" />
+    <title>Zcash Payment Sessions — Reference Checkout</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">REFERENCE IMPLEMENTATION</p>
+          <h1>Zcash Payment Sessions</h1>
+          <p class="lede">
+            A small checkout proof for durable ZIP-321 requests and exact wallet
+            payment matching.
+          </p>
+        </div>
+        <div class="network-stack">
+          <span class="network-badge"><span class="dot"></span> Testnet</span>
+          <span id="mode-badge" class="mode-badge">Demo simulation</span>
+        </div>
+      </header>
+
+      <main class="page-grid">
+        <section class="checkout-card card">
+          <div class="card-heading">
+            <div>
+              <p class="eyebrow">PAYMENT REQUEST</p>
+              <h2>Shielded checkout</h2>
+            </div>
+            <span id="session-badge" class="status-pill">READY</span>
+          </div>
+
+          <div class="amount-block">
+            <span id="amount-display" class="amount">—</span>
+            <span class="currency">ZEC</span>
+          </div>
+          <p id="recipient-display" class="muted recipient">
+            Create a session to derive the payment request.
+          </p>
+
+          <div id="qr-frame" class="qr-frame" aria-label="Payment QR code">
+            <div class="qr-empty">
+              <span class="qr-mark">⌁</span>
+              <span>QR appears when a session is created</span>
+            </div>
+          </div>
+
+          <label class="field-label" for="uri-display">ZIP-321 URI</label>
+          <div class="uri-row">
+            <textarea id="uri-display" readonly rows="3" spellcheck="false"></textarea>
+            <button id="copy-uri" class="button button-secondary" type="button" disabled>
+              Copy
+            </button>
+          </div>
+
+          <div class="expiry-row">
+            <span class="muted">Expires</span>
+            <strong id="countdown">—</strong>
+          </div>
+        </section>
+
+        <aside class="control-column">
+          <section class="card controls-card">
+            <div class="card-heading compact">
+              <div>
+                <p class="eyebrow">CONTROL ROOM</p>
+                <h2>Run the flow</h2>
+              </div>
+            </div>
+
+            <div class="mode-switch" role="group" aria-label="Demo mode">
+              <button id="mode-simulation" class="mode-button active" type="button">
+                Demo simulation
+              </button>
+              <button id="mode-testnet" class="mode-button" type="button">
+                Real testnet
+              </button>
+            </div>
+
+            <div id="real-config" class="real-config hidden">
+              <p class="config-note">
+                Uses the real WebZjs testnet wallet. Provide a browser-compatible
+                gRPC-web endpoint; raw lightwalletd gRPC URLs do not work in browsers.
+              </p>
+              <label class="field-label" for="lightwalletd-url">Testnet gRPC-web endpoint</label>
+              <input id="lightwalletd-url" type="url" placeholder="https://your-grpc-web-proxy.example" autocomplete="off" />
+              <label class="field-label" for="viewing-key">View-only UFVK <span>(kept in memory, never logged)</span></label>
+              <input id="viewing-key" type="password" placeholder="Optional if a wallet is already persisted" autocomplete="off" />
+              <label class="field-label" for="birthday-height">Wallet birthday height</label>
+              <input id="birthday-height" type="number" min="0" placeholder="Optional" />
+              <button id="open-testnet" class="button button-secondary full-width" type="button">
+                Open testnet wallet
+              </button>
+            </div>
+
+            <label class="field-label" for="amount-input">Amount</label>
+            <div class="amount-input-row">
+              <input id="amount-input" type="text" inputmode="decimal" value="0.01000000" />
+              <span>ZEC</span>
+            </div>
+            <label class="field-label" for="memo-input">Memo token</label>
+            <input id="memo-input" type="text" value="demo-order" maxlength="512" />
+
+            <div class="button-stack">
+              <button id="create-session" class="button button-primary" type="button">
+                Create payment session
+              </button>
+              <button id="refresh-status" class="button button-secondary" type="button">
+                Refresh payment status
+              </button>
+              <button id="reset-demo" class="button button-quiet" type="button">
+                Reset demo
+              </button>
+            </div>
+
+            <p id="error-message" class="error-message" role="alert"></p>
+          </section>
+
+          <section id="simulation-controls" class="card simulation-card">
+            <div class="card-heading compact">
+              <div>
+                <p class="eyebrow">DEMO SIMULATION</p>
+                <h2>Drive the state machine</h2>
+              </div>
+            </div>
+            <p class="muted small">
+              These controls use a test wallet adapter and still call the public SDK.
+              Simulated data is never presented as a real payment.
+            </p>
+            <div class="simulation-grid">
+              <button data-scenario="exact" class="scenario-button" type="button">Exact payment</button>
+              <button data-scenario="confirming" class="scenario-button" type="button">+1 confirmation</button>
+              <button data-scenario="paid" class="scenario-button" type="button">Reach paid</button>
+              <button data-scenario="ambiguous" class="scenario-button" type="button">Ambiguous</button>
+              <button data-scenario="reorg" class="scenario-button" type="button">Reorg</button>
+              <button data-scenario="expire" class="scenario-button" type="button">Expire</button>
+            </div>
+          </section>
+        </aside>
+
+        <section class="card timeline-card">
+          <div class="card-heading compact">
+            <div>
+              <p class="eyebrow">SESSION LIFECYCLE</p>
+              <h2>Payment status</h2>
+            </div>
+            <span id="lifecycle-note" class="muted small">Waiting for a session</span>
+          </div>
+          <ol id="timeline" class="timeline">
+            <li data-timeline="AWAITING_PAYMENT"><span class="timeline-node"></span><span>Awaiting payment</span></li>
+            <li data-timeline="DETECTED"><span class="timeline-node"></span><span>Payment detected</span></li>
+            <li data-timeline="CONFIRMING"><span class="timeline-node"></span><span>Confirming</span></li>
+            <li data-timeline="PAID"><span class="timeline-node"></span><span>Paid</span></li>
+          </ol>
+          <div id="exception-state" class="exception-state hidden"></div>
+        </section>
+
+        <section class="card details-card">
+          <div class="card-heading compact">
+            <div>
+              <p class="eyebrow">OBSERVATION DETAILS</p>
+              <h2>What the SDK matched</h2>
+            </div>
+          </div>
+          <dl class="details-grid">
+            <div><dt>Session ID</dt><dd id="detail-session">—</dd></div>
+            <div><dt>Payment identity</dt><dd id="detail-payment">—</dd></div>
+            <div><dt>Transaction ID</dt><dd id="detail-txid">—</dd></div>
+            <div><dt>Confirmations</dt><dd id="detail-confirmations">—</dd></div>
+            <div><dt>Required confirmations</dt><dd>2</dd></div>
+            <div><dt>Pool</dt><dd id="detail-pool">—</dd></div>
+            <div><dt>Expires at</dt><dd id="detail-expiry">—</dd></div>
+            <div><dt>Mode</dt><dd id="detail-mode">Demo simulation</dd></div>
+          </dl>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>Built on ZIP-321 + WebZjs</span>
+        <span>Persistent session state · No secrets in the demo state</span>
+      </footer>
+    </div>
+    <script type="importmap">
+      {
+        "imports": {
+          "@chainsafe/webzjs-wallet": "/webzjs-wallet/webzjs_wallet.js"
+        }
+      }
+    </script>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

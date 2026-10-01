@@ -53,3 +53,54 @@ npm run test:consumer
 The package facade is emitted to `dist/` and is exposed through the package `exports` map. The
 consumer smoke test imports the built package by name, matching third-party consumption rather
 than importing source internals.
+
+## Reference checkout
+
+The repository includes a small browser checkout at `examples/checkout`. It is deliberately
+frontend-only: the checkout controller imports the package facade, creates a ZIP-321 URI, passes
+that exact URI to the maintained `qr` encoder, and renders the payment-session state machine.
+
+```mermaid
+flowchart LR
+  UI[Checkout reference UI] --> SDK[ZcashPaymentSessions public facade]
+  SDK --> ZIP[WebZjs requests WASM\nZIP-321]
+  SDK --> STORE[Session storage]
+  SDK --> MATCH[Payment monitor]
+  MATCH --> SIM[Deterministic simulated wallet]
+  MATCH --> WALLET[WebZjsBrowserWallet]
+  WALLET --> WDB[Serialized WebZjs wallet DB]
+  WALLET --> LWD[Browser-compatible testnet gRPC-web endpoint]
+```
+
+Prepare and build the reference app from a clean checkout:
+
+```sh
+npm run bootstrap:webzjs
+npm ci
+npm run demo:typecheck
+npm run demo:build
+npm run demo:dev
+```
+
+The default mode is deterministic simulation and requires no wallet, endpoint, or funds. It
+demonstrates exact detection, confirmation progression, duplicate refreshes, ambiguity, reorg,
+expiry, URI copy, QR rendering, and active-session restoration from browser storage.
+
+The real mode is explicit and testnet-only. It requires a user-provided browser-compatible
+gRPC-web lightwalletd endpoint and a testnet UFVK for the first view-only account import. The
+endpoint is intentionally not hardcoded: the pinned WebZjs README documents a mainnet sample but
+does not provide a verified public testnet gRPC-web endpoint. A raw lightwalletd gRPC endpoint is
+not interchangeable with the browser gRPC-web transport. The imported view-only wallet database
+is serialized through WebZjs `db_to_bytes()` and stored under a separate browser-storage key;
+the UFVK input is cleared after account creation and no seed or private key is accepted or logged.
+
+The browser adapter uses only the generated WebZjs public package. On first open it initializes
+the generated wallet WASM and its worker pool once, restores the serialized database if present,
+and exposes sync, current-address, view-only-account, and received-payment operations. The
+generated package is `@chainsafe/webzjs-wallet@0.1.0`; ZIP-321 generation comes from the pinned
+`@chainsafe/webzjs-requests@0.1.0` package. Both packages are built locally from the pinned
+WebZjs commit and remain ignored build artifacts.
+
+The app is a reference implementation rather than a claim of a live testnet payment. Configure a
+verified endpoint, import a testnet UFVK, and fund a testnet account before exercising real sync
+and matching.

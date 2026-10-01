@@ -64,4 +64,20 @@ describe("WebZjs wallet payment adapter", () => {
       "Unknown WebZjs received payment status"
     );
   });
+
+  it("releases the generated WebZjs response after mapping", async () => {
+    let freed = false;
+    const wallet = {
+      get_received_payments: async () => ({
+        payments: [],
+        free: () => {
+          freed = true;
+        }
+      })
+    };
+
+    await new WebZjsPaymentSource(wallet, 0).list();
+
+    expect(freed).toBe(true);
+  });
 });

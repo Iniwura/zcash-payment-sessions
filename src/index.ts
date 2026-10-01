@@ -1,4 +1,12 @@
 import type { InitInput } from "@chainsafe/webzjs-requests";
+export {
+  WebZjsBrowserWallet,
+  WebZjsBrowserWalletError,
+  type BrowserWalletErrorCode,
+  type BrowserWalletNetwork,
+  type BrowserWalletState,
+  type WebZjsBrowserWalletOptions
+} from "./browser-wallet.js";
 import {
   createPaymentSession,
   type CreatePaymentSessionInput,
@@ -19,6 +27,8 @@ import {
 } from "./zip321.js";
 import {
   WebZjsPaymentSource,
+  type WebZjsReceivedPayment,
+  type WebZjsReceivedPaymentResponse,
   type WebZjsWalletLike
 } from "./wallet.js";
 
@@ -151,6 +161,8 @@ export class ZcashPaymentSessions {
 export type {
   KeyValueStorage,
   PaymentObservationResult,
+  WebZjsReceivedPayment,
+  WebZjsReceivedPaymentResponse,
   WebZjsWalletLike,
   Zip321OtherParams
 };

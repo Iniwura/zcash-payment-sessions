@@ -13,8 +13,8 @@
     "dist"
   ],
   "dependencies": {
-    "@chainsafe/webzjs-wallet": "file:.deps/WebZjs/packages/webzjs-wallet",
-    "@chainsafe/webzjs-requests": "file:.deps/WebZjs/packages/webzjs-requests"
+    "@chainsafe/webzjs-requests": "file:.deps/WebZjs/packages/webzjs-requests",
+    "@chainsafe/webzjs-wallet": "file:.deps/WebZjs/packages/webzjs-wallet"
   },
   "scripts": {
     "bootstrap:webzjs": "bash scripts/bootstrap-webzjs.sh",
@@ -23,13 +23,20 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "verify:reproducibility": "node scripts/verify-reproducibility.mjs",
-    "test:consumer": "node scripts/consumer-smoke.mjs"
+    "test:consumer": "node scripts/consumer-smoke.mjs",
+    "demo:prepare": "node scripts/prepare-demo-webzjs.mjs",
+    "demo:dev": "npm run demo:prepare && vite --config examples/checkout/vite.config.ts",
+    "demo:build": "npm run demo:prepare && vite build --config examples/checkout/vite.config.ts",
+    "demo:typecheck": "tsc -p examples/checkout/tsconfig.json --noEmit",
+    "demo:preview": "vite preview --config examples/checkout/vite.config.ts"
   },
   "keywords": [],
   "type": "module",
   "devDependencies": {
     "@types/node": "^26.6.3",
+    "qr": "^0.7.2",
     "typescript": "^7.0.2",
+    "vite": "^8.3.2",
     "vitest": "^5.0.3"
   }
 }
