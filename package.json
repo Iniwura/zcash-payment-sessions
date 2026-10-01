@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "@chainsafe/webzjs-wallet": "file:../WebZjs/packages/webzjs-wallet",
     "@chainsafe/webzjs-requests": "file:../WebZjs/packages/webzjs-requests"
   },
   "scripts": {
