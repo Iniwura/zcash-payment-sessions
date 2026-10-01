@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "dependencies": {
+    "@chainsafe/webzjs-requests": "file:../WebZjs/packages/webzjs-requests"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
