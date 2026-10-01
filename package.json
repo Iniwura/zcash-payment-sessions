@@ -2,16 +2,28 @@
   "name": "zcash-payment-sessions",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "dependencies": {
-    "@chainsafe/webzjs-wallet": "file:../WebZjs/packages/webzjs-wallet",
-    "@chainsafe/webzjs-requests": "file:../WebZjs/packages/webzjs-requests"
+    "@chainsafe/webzjs-wallet": "file:.deps/WebZjs/packages/webzjs-wallet",
+    "@chainsafe/webzjs-requests": "file:.deps/WebZjs/packages/webzjs-requests"
   },
   "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "bootstrap:webzjs": "bash scripts/bootstrap-webzjs.sh",
+    "test": "vitest run tests",
+    "test:watch": "vitest tests",
     "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "build": "tsc",
+    "verify:reproducibility": "node scripts/verify-reproducibility.mjs",
+    "test:consumer": "node scripts/consumer-smoke.mjs"
   },
   "keywords": [],
   "type": "module",

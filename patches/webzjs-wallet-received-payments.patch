@@ -1,0 +1,219 @@
+diff --git a/crates/webzjs-wallet/src/bindgen/transaction_history.rs b/crates/webzjs-wallet/src/bindgen/transaction_history.rs
+index a6c6029..3bb4f64 100644
+--- a/crates/webzjs-wallet/src/bindgen/transaction_history.rs
++++ b/crates/webzjs-wallet/src/bindgen/transaction_history.rs
+@@ -118,0 +119,97 @@ impl TransactionHistoryEntry {
++/// The status of a received payment output.
++#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
++#[wasm_bindgen]
++pub enum ReceivedPaymentStatusType {
++    /// The transaction is mined in the main chain.
++    Mined,
++    /// The transaction is pending and has not been mined in the main chain.
++    Pending,
++    /// The transaction expired without being mined.
++    Expired,
++    /// The transaction was previously mined but is no longer in the main chain.
++    Reorged,
++}
++
++/// A single received shielded payment output.
++///
++/// Unlike transaction history entries, this type preserves output identity so callers can
++/// safely match one payment output to at most one application-level payment.
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[wasm_bindgen(inspectable)]
++pub struct ReceivedPayment {
++    /// Stable output identity: <txid>:<pool>:<output-index>.
++    payment_id: String,
++    /// Hex-encoded transaction ID.
++    txid: String,
++    /// Zatoshis received by this output.
++    value: u64,
++    /// Decoded memo text, if present and non-empty.
++    memo: Option<String>,
++    /// Block height where the transaction was mined.
++    block_height: Option<u32>,
++    /// Number of confirmations based on the current wallet chain tip.
++    confirmations: u32,
++    /// Current chain status for the transaction.
++    status: ReceivedPaymentStatusType,
++    /// Pool containing this output.
++    pool: String,
++}
++
++#[wasm_bindgen]
++impl ReceivedPayment {
++    #[wasm_bindgen(getter)]
++    pub fn payment_id(&self) -> String {
++        self.payment_id.clone()
++    }
++
++    #[wasm_bindgen(getter)]
++    pub fn txid(&self) -> String {
++        self.txid.clone()
++    }
++
++    #[wasm_bindgen(getter)]
++    pub fn value(&self) -> u64 {
++        self.value
++    }
++
++    #[wasm_bindgen(getter)]
++    pub fn memo(&self) -> Option<String> {
++        self.memo.clone()
++    }
++
++    #[wasm_bindgen(getter)]
++    pub fn block_height(&self) -> Option<u32> {
++        self.block_height
++    }
++
++    #[wasm_bindgen(getter)]
++    pub fn confirmations(&self) -> u32 {
++        self.confirmations
++    }
++
++    #[wasm_bindgen(getter)]
++    pub fn status(&self) -> ReceivedPaymentStatusType {
++        self.status
++    }
++
++    #[wasm_bindgen(getter)]
++    pub fn pool(&self) -> String {
++        self.pool.clone()
++    }
++}
++
++/// Response containing exact received payment outputs.
++#[derive(Debug, Clone, Serialize, Deserialize)]
++#[wasm_bindgen(inspectable)]
++pub struct ReceivedPaymentResponse {
++    payments: Vec<ReceivedPayment>,
++}
++
++#[wasm_bindgen]
++impl ReceivedPaymentResponse {
++    #[wasm_bindgen(getter)]
++    pub fn payments(&self) -> JsValue {
++        serde_wasm_bindgen::to_value(&self.payments).unwrap_or(JsValue::NULL)
++    }
++}
++
+@@ -374,3 +471,91 @@ pub fn extract_transaction_history(
+         has_more,
+     })
+ }
++
++/// Extract exact received shielded payment outputs from the wallet database.
++///
++/// This intentionally does not reuse transaction history aggregation: one transaction may
++/// contain multiple received outputs and multiple memos. Outputs belonging to transactions
++/// that also contain wallet-owned sent notes are excluded so wallet change cannot be mistaken
++/// for an external payment.
++pub fn extract_received_payments(
++    db: &MemoryWalletDb<Network>,
++    account_id: u32,
++    chain_tip_height: Option<u32>,
++) -> Result<ReceivedPaymentResponse, Error> {
++    let account_id_typed = AccountId::from(account_id);
++    let sent_txids: std::collections::HashSet<TxId> = db
++        .sent_notes()
++        .keys()
++        .map(|sent_note_id| *sent_note_id.txid())
++        .collect();
++
++    let payments = db
++        .received_notes()
++        .iter()
++        .filter(|note| note.account_id() == account_id_typed)
++        .filter(|note| !sent_txids.contains(&note.txid()))
++        .map(|note| {
++            let txid = note.txid();
++            let txid_hex = hex::encode(txid.as_ref());
++            let pool = match note.note() {
++                zcash_client_backend::wallet::Note::Sapling(_) => "sapling",
++                zcash_client_backend::wallet::Note::Orchard(_) => "orchard",
++            };
++            let payment_id = format!("{}:{}:{}", txid_hex, pool, note.note_id().output_index());
++
++            let (status, expiry_height) = db
++                .tx_table()
++                .get(&txid)
++                .map(|entry| (Some(entry.status()), entry.expiry_height()))
++                .unwrap_or((None, None));
++
++            let (status, block_height) = match status {
++                Some(TransactionStatus::Mined(height)) => {
++                    (ReceivedPaymentStatusType::Mined, Some(u32::from(height)))
++                }
++                Some(TransactionStatus::NotInMainChain) => {
++                    let expired = expiry_height
++                        .zip(chain_tip_height)
++                        .is_some_and(|(expiry, tip)| u32::from(expiry) <= tip);
++                    if expired {
++                        (ReceivedPaymentStatusType::Expired, None)
++                    } else {
++                        (ReceivedPaymentStatusType::Reorged, None)
++                    }
++                }
++                Some(TransactionStatus::TxidNotRecognized) | None => {
++                    (ReceivedPaymentStatusType::Pending, None)
++                }
++            };
++
++            let confirmations = match (block_height, chain_tip_height) {
++                (Some(payment_height), Some(tip_height)) if tip_height >= payment_height => {
++                    tip_height - payment_height + 1
++                }
++                _ => 0,
++            };
++
++            let memo = match note.memo() {
++                zcash_protocol::memo::Memo::Text(text) => {
++                    let memo = text.to_string();
++                    (!memo.is_empty()).then_some(memo)
++                }
++                _ => None,
++            };
++
++            ReceivedPayment {
++                payment_id,
++                txid: txid_hex,
++                value: note.note().value().into_u64(),
++                memo,
++                block_height,
++                confirmations,
++                status,
++                pool: pool.to_string(),
++            }
++        })
++        .collect();
++
++    Ok(ReceivedPaymentResponse { payments })
++}
+diff --git a/crates/webzjs-wallet/src/bindgen/wallet.rs b/crates/webzjs-wallet/src/bindgen/wallet.rs
+index 7b29651..90e7770 100644
+--- a/crates/webzjs-wallet/src/bindgen/wallet.rs
++++ b/crates/webzjs-wallet/src/bindgen/wallet.rs
+@@ -596,0 +597,20 @@ impl WebWallet {
++    /// Get exact received shielded payment outputs for an account.
++    ///
++    /// Unlike transaction history, this preserves one entry per received output and exposes a
++    /// stable output identity for safe application-level payment matching.
++    pub async fn get_received_payments(
++        &self,
++        account_id: u32,
++    ) -> Result<super::transaction_history::ReceivedPaymentResponse, Error> {
++        let db = self.inner.db.read().await;
++        let chain_tip_height = self
++            .inner
++            .get_wallet_summary()
++            .await
++            .ok()
++            .flatten()
++            .map(|s| s.chain_tip_height().into());
++
++        super::transaction_history::extract_received_payments(&db, account_id, chain_tip_height)
++    }
++
