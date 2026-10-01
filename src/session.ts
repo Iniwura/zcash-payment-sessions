@@ -7,9 +7,12 @@ export type PaymentSessionStatus =
   | "REORGED"
   | "AMBIGUOUS";
 
+export const DEFAULT_SESSION_TTL_MS = 20 * 60 * 1000;
+
 export interface CreatePaymentSessionInput {
   amountZatoshis: bigint;
   memo: string;
+  expiresInMs?: number;
 }
 
 export interface PaymentSession {
@@ -17,6 +20,8 @@ export interface PaymentSession {
   amountZatoshis: bigint;
   memo: string;
   status: PaymentSessionStatus;
+  createdAtMs: number;
+  expiresAtMs: number;
 }
 
 const ALLOWED_TRANSITIONS: Record<
@@ -39,11 +44,22 @@ export function createPaymentSession(
     throw new Error("Payment amount must be greater than zero");
   }
 
+  const expiresInMs =
+    input.expiresInMs ?? DEFAULT_SESSION_TTL_MS;
+
+  if (!Number.isSafeInteger(expiresInMs) || expiresInMs <= 0) {
+    throw new Error("Payment session expiry must be greater than zero");
+  }
+
+  const createdAtMs = Date.now();
+
   return {
     id: crypto.randomUUID(),
     amountZatoshis: input.amountZatoshis,
     memo: input.memo,
-    status: "AWAITING_PAYMENT"
+    status: "AWAITING_PAYMENT",
+    createdAtMs,
+    expiresAtMs: createdAtMs + expiresInMs
   };
 }
 
@@ -61,4 +77,19 @@ export function transitionPaymentSession(
     ...session,
     status: nextStatus
   };
+}
+
+export function expirePaymentSession(
+  session: PaymentSession,
+  nowMs: number = Date.now()
+): PaymentSession {
+  if (nowMs < session.expiresAtMs) {
+    return session;
+  }
+
+  if (!ALLOWED_TRANSITIONS[session.status].includes("EXPIRED")) {
+    return session;
+  }
+
+  return transitionPaymentSession(session, "EXPIRED");
 }
