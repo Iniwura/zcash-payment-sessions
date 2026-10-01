@@ -86,11 +86,11 @@
                 gRPC-web endpoint; raw lightwalletd gRPC URLs do not work in browsers.
               </p>
               <label class="field-label" for="lightwalletd-url">Testnet gRPC-web endpoint</label>
-              <input id="lightwalletd-url" type="url" placeholder="https://your-grpc-web-proxy.example" autocomplete="off" />
+              <input id="lightwalletd-url" type="url" value="http://127.0.0.1:18080" placeholder="http://127.0.0.1:18080" autocomplete="off" />
               <label class="field-label" for="viewing-key">View-only UFVK <span>(kept in memory, never logged)</span></label>
               <input id="viewing-key" type="password" placeholder="Optional if a wallet is already persisted" autocomplete="off" />
               <label class="field-label" for="birthday-height">Wallet birthday height</label>
-              <input id="birthday-height" type="number" min="0" placeholder="Optional" />
+              <input id="birthday-height" type="number" min="0" placeholder="Required for a new account" />
               <button id="open-testnet" class="button button-secondary full-width" type="button">
                 Open testnet wallet
               </button>

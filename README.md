@@ -86,13 +86,14 @@ The default mode is deterministic simulation and requires no wallet, endpoint, o
 demonstrates exact detection, confirmation progression, duplicate refreshes, ambiguity, reorg,
 expiry, URI copy, QR rendering, and active-session restoration from browser storage.
 
-The real mode is explicit and testnet-only. It requires a user-provided browser-compatible
-gRPC-web lightwalletd endpoint and a testnet UFVK for the first view-only account import. The
-endpoint is intentionally not hardcoded: the pinned WebZjs README documents a mainnet sample but
-does not provide a verified public testnet gRPC-web endpoint. A raw lightwalletd gRPC endpoint is
-not interchangeable with the browser gRPC-web transport. The imported view-only wallet database
-is serialized through WebZjs `db_to_bytes()` and stored under a separate browser-storage key;
-the UFVK input is cleared after account creation and no seed or private key is accepted or logged.
+The real mode is explicit and testnet-only. The reference app defaults to the verified local proxy
+URL `http://127.0.0.1:18080`, which forwards gRPC-Web to `testnet.zec.rocks:443`; it can be
+overridden for another browser-compatible proxy. A raw lightwalletd gRPC endpoint is not
+interchangeable with the browser gRPC-web transport. The first view-only account import requires a
+user-provided testnet UFVK and an explicit account birthday height; no birthday is invented and no
+full-chain scan is started implicitly. The imported view-only wallet database is serialized
+through WebZjs `db_to_bytes()` and stored under a separate browser-storage key; the UFVK input is
+cleared after account creation and no seed or private key is accepted or logged.
 
 The browser adapter uses only the generated WebZjs public package. On first open it initializes
 the generated wallet WASM and its worker pool once, restores the serialized database if present,
@@ -100,6 +101,10 @@ and exposes sync, current-address, view-only-account, and received-payment opera
 generated package is `@chainsafe/webzjs-wallet@0.1.0`; ZIP-321 generation comes from the pinned
 `@chainsafe/webzjs-requests@0.1.0` package. Both packages are built locally from the pinned
 WebZjs commit and remain ignored build artifacts.
+
+The Vite dev and preview servers send `Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Embedder-Policy: require-corp`. These headers are required for the generated WebZjs
+worker pool and `SharedArrayBuffer`; without them the browser wallet cannot initialize.
 
 The app is a reference implementation rather than a claim of a live testnet payment. Configure a
 verified endpoint, import a testnet UFVK, and fund a testnet account before exercising real sync

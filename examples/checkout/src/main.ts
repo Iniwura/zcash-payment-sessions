@@ -8,6 +8,10 @@ import {
 import { CheckoutDemoController } from "./controller.js";
 import { createPaymentQrSvg } from "./qr.js";
 import { SimulatedWallet } from "./simulated-wallet.js";
+import {
+  DEFAULT_TESTNET_GRPC_WEB_ENDPOINT,
+  parseTestnetBirthday
+} from "./testnet-config.js";
 import "./style.css";
 
 type DemoMode = "simulation" | "testnet";
@@ -108,7 +112,9 @@ async function createSimulationRuntime(): Promise<Runtime> {
 }
 
 async function openTestnetRuntime(): Promise<Runtime> {
-  const lightwalletdUrl = elements.lightwalletdUrl.value.trim();
+  const lightwalletdUrl =
+    elements.lightwalletdUrl.value.trim() ||
+    DEFAULT_TESTNET_GRPC_WEB_ENDPOINT;
   if (lightwalletdUrl.length === 0) {
     throw new Error("Enter a verified browser-compatible testnet gRPC-web endpoint first");
   }
@@ -128,13 +134,13 @@ async function openTestnetRuntime(): Promise<Runtime> {
         throw new Error("Enter a testnet UFVK once to create the view-only account");
       }
 
-      const birthdayText = elements.birthdayHeight.value.trim();
+      const birthdayHeight = parseTestnetBirthday(
+        elements.birthdayHeight.value
+      );
       accountId = await browserWallet.createViewOnlyAccount({
         accountName: "checkout-testnet",
         ufvk: viewingKey,
-        ...(birthdayText.length === 0
-          ? {}
-          : { birthdayHeight: parseBirthday(birthdayText) })
+        birthdayHeight
       });
       elements.viewingKey.value = "";
     }
@@ -179,19 +185,19 @@ function bindEvents(): void {
   });
 
   document.getElementById("mode-simulation")?.addEventListener("click", () => {
-    void switchMode("simulation");
+    void selectMode("simulation");
   });
   document.getElementById("mode-testnet")?.addEventListener("click", () => {
-    void switchMode("testnet");
+    selectMode("testnet");
   });
-  elements.openTestnet.addEventListener("click", () => void switchMode("testnet"));
+  elements.openTestnet.addEventListener("click", () => void openTestnetWallet());
   elements.createSession.addEventListener("click", () => void createSession());
   elements.refreshStatus.addEventListener("click", () => void refreshStatus());
   elements.resetDemo.addEventListener("click", resetDemo);
   elements.copyUri.addEventListener("click", () => void copyUri());
 }
 
-async function switchMode(nextMode: DemoMode): Promise<void> {
+async function selectMode(nextMode: DemoMode): Promise<void> {
   clearError();
   if (nextMode === "simulation") {
     runtime?.browserWallet?.close();
@@ -201,9 +207,16 @@ async function switchMode(nextMode: DemoMode): Promise<void> {
     return;
   }
 
+  runtime?.browserWallet?.close();
+  runtime = undefined;
+  mode = "testnet";
+  render(null, undefined);
+}
+
+async function openTestnetWallet(): Promise<void> {
+  clearError();
   try {
     elements.openTestnet.disabled = true;
-    runtime?.browserWallet?.close();
     runtime = await openTestnetRuntime();
     mode = "testnet";
     render();
@@ -434,14 +447,6 @@ function parseAmount(value: string): bigint {
   const zatoshis = BigInt(whole) * 100_000_000n + BigInt(fraction.padEnd(8, "0"));
   if (zatoshis <= 0n) throw new Error("Amount must be greater than zero");
   return zatoshis;
-}
-
-function parseBirthday(value: string): number {
-  const birthday = Number(value);
-  if (!Number.isSafeInteger(birthday) || birthday < 0) {
-    throw new Error("Birthday height must be a non-negative integer");
-  }
-  return birthday;
 }
 
 function formatZec(zatoshis: bigint): string {
