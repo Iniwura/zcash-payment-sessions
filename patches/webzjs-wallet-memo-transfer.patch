@@ -1,0 +1,93 @@
+diff --git a/crates/webzjs-wallet/src/bindgen/wallet.rs b/crates/webzjs-wallet/src/bindgen/wallet.rs
+--- a/crates/webzjs-wallet/src/bindgen/wallet.rs
++++ b/crates/webzjs-wallet/src/bindgen/wallet.rs
+@@ -347,0 +348,19 @@ impl WebWallet {
++    /// Create a transaction proposal for one shielded payment with an exact memo.
++    ///
++    /// This is a local additive method for the payment-session testnet tooling. The stock
++    /// `propose_transfer` method remains memo-less.
++    pub async fn propose_transfer_with_memo(
++        &self,
++        account_id: u32,
++        to_address: String,
++        value: u64,
++        memo: Vec<u8>,
++    ) -> Result<Proposal, Error> {
++        let to_address = ZcashAddress::try_from_encoded(&to_address)?;
++        let proposal = self
++            .inner
++            .propose_transfer_with_memo(AccountId::from(account_id), to_address, value, memo)
++            .await?;
++        Ok(proposal.into())
++    }
++
+diff --git a/crates/webzjs-wallet/src/wallet.rs b/crates/webzjs-wallet/src/wallet.rs
+--- a/crates/webzjs-wallet/src/wallet.rs
++++ b/crates/webzjs-wallet/src/wallet.rs
+@@ -51,0 +52 @@ use zcash_protocol::ShieldedProtocol;
++use zcash_protocol::memo::MemoBytes;
+@@ -349,0 +351,64 @@ where
++    /// Create a transaction proposal for one shielded payment with an exact memo.
++    ///
++    /// This additive local method is used by the payment-session testnet tooling. The stock
++    /// `propose_transfer` method intentionally remains memo-less for compatibility.
++    pub async fn propose_transfer_with_memo(
++        &self,
++        account_id: AccountId,
++        to_address: ZcashAddress,
++        value: u64,
++        memo: Vec<u8>,
++    ) -> Result<Proposal<StandardFeeRule, NoteRef>, Error> {
++        let input_selector = GreedyInputSelector::new();
++
++        let change_strategy = MultiOutputChangeStrategy::new(
++            StandardFeeRule::Zip317,
++            None,
++            ShieldedProtocol::Orchard,
++            DustOutputPolicy::default(),
++            SplitPolicy::with_min_output_value(
++                NonZeroUsize::new(self.target_note_count)
++                    .ok_or(Error::FailedToCreateTransaction)?,
++                Zatoshis::from_u64(self.min_split_output_value)?,
++            ),
++        );
++        let memo = MemoBytes::from_bytes(&memo)?;
++        let payment = Payment::new(
++            to_address,
++            Some(Zatoshis::from_u64(value)?),
++            Some(memo),
++            None,
++            None,
++            vec![],
++        )
++        .ok_or(Error::UnsupportedMemoRecipient)?;
++        let request = TransactionRequest::new(vec![payment])?;
++
++        tracing::info!("Chain height: {:?}", self.db.read().await.chain_height()?);
++        tracing::info!(
++            "target and anchor heights: {:?}",
++            self.db
++                .read()
++                .await
++                .get_target_and_anchor_heights(self.min_confirmations.trusted())?
++        );
++        let mut db = self.db.write().await;
++        let proposal = propose_transfer::<_, _, _, _, <W as WalletCommitmentTrees>::Error>(
++            &mut *db,
++            &self.network,
++            account_id,
++            &input_selector,
++            &change_strategy,
++            request,
++            self.min_confirmations,
++        )
++        .map_err(|_e| {
++            Error::Generic(
++                "something bad happened when calling propose transfer. Possibly insufficient balance.."
++                    .to_string(),
++            )
++        })?;
++        tracing::info!("Memo-preserving transfer proposal created");
++        Ok(proposal)
++    }
++

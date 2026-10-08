@@ -8,10 +8,10 @@ const webzjs = resolve(
 );
 const expectedCommit =
   "a50df944c32243cb8da9f86e7d52cb65ac926439";
-const patch = resolve(
-  root,
-  "patches/webzjs-wallet-received-payments.patch"
-);
+const patches = [
+  resolve(root, "patches/webzjs-wallet-received-payments.patch"),
+  resolve(root, "patches/webzjs-wallet-memo-transfer.patch")
+];
 
 function fail(message) {
   console.error("verify-reproducibility: " + message);
@@ -33,17 +33,19 @@ if (git("rev-parse", "HEAD") !== expectedCommit) {
   fail("WebZjs HEAD is not " + expectedCommit);
 }
 
-try {
-  execFileSync(
-    "git",
-    ["apply", "--unidiff-zero", "--reverse", "--check", patch],
-    {
-    cwd: webzjs,
-    stdio: "ignore"
-    }
-  );
-} catch {
-  fail("the stored WebZjs patch is not applied cleanly");
+for (const patch of patches) {
+  try {
+    execFileSync(
+      "git",
+      ["apply", "--unidiff-zero", "--reverse", "--check", patch],
+      {
+        cwd: webzjs,
+        stdio: "ignore"
+      }
+    );
+  } catch {
+    fail("a stored WebZjs patch is not applied cleanly: " + patch);
+  }
 }
 
 const changedFiles = git("diff", "--name-only")
@@ -51,7 +53,8 @@ const changedFiles = git("diff", "--name-only")
   .filter(Boolean);
 const expectedChangedFiles = [
   "crates/webzjs-wallet/src/bindgen/transaction_history.rs",
-  "crates/webzjs-wallet/src/bindgen/wallet.rs"
+  "crates/webzjs-wallet/src/bindgen/wallet.rs",
+  "crates/webzjs-wallet/src/wallet.rs"
 ];
 if (changedFiles.join(String.fromCharCode(10)) !==
     expectedChangedFiles.join(String.fromCharCode(10))) {
@@ -77,6 +80,14 @@ for (const [relative, expectedName] of packages) {
         packageJson.name + "@" + packageJson.version
     );
   }
+}
+
+const walletDeclaration = readFileSync(
+  resolve(webzjs, "packages/webzjs-wallet/webzjs_wallet.d.ts"),
+  "utf8"
+);
+if (!walletDeclaration.includes("propose_transfer_with_memo")) {
+  fail("generated wallet declaration is missing propose_transfer_with_memo");
 }
 
 const packageJson = JSON.parse(
@@ -116,5 +127,5 @@ for (const file of trackedFiles) {
 
 console.log(
   "reproducibility verified: WebZjs " + expectedCommit +
-    ", patch applied, keys/requests/wallet packages at 0.1.0"
+    ", patches applied, keys/requests/wallet packages at 0.1.0"
 );

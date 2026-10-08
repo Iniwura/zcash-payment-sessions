@@ -31,6 +31,10 @@ import {
   type WebZjsReceivedPaymentResponse,
   type WebZjsWalletLike
 } from "./wallet.js";
+export {
+  proposeZip321Transfer,
+  type WebZjsMemoSenderWallet
+} from "./sender.js";
 
 const URI_PREFIX = "zcash-payment-session-uri:";
 

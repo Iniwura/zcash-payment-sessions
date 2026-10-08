@@ -6,6 +6,7 @@ WEBZJS_REPOSITORY="https://github.com/ChainSafe/WebZjs.git"
 WEBZJS_COMMIT="a50df944c32243cb8da9f86e7d52cb65ac926439"
 WEBZJS_DIR="${WEBZJS_DIR:-$ROOT_DIR/.deps/WebZjs}"
 PATCH_FILE="$ROOT_DIR/patches/webzjs-wallet-received-payments.patch"
+MEMO_PATCH_FILE="$ROOT_DIR/patches/webzjs-wallet-memo-transfer.patch"
 RUST_TOOLCHAIN="nightly-2025-01-07"
 
 fail() {
@@ -27,6 +28,7 @@ require_command rustup
 require_command cargo
 
 [[ -f "$PATCH_FILE" ]] || fail "missing patch artifact: $PATCH_FILE"
+[[ -f "$MEMO_PATCH_FILE" ]] || fail "missing patch artifact: $MEMO_PATCH_FILE"
 
 echo "bootstrap-webzjs: node $(node --version), npm $(npm --version)"
 echo "bootstrap-webzjs: clang $(clang --version | head -n 1)"
@@ -78,22 +80,26 @@ fi
 [[ "$(git -C "$WEBZJS_DIR" rev-parse HEAD)" == "$WEBZJS_COMMIT" ]] ||
   fail "WebZjs HEAD verification failed"
 
-if git -C "$WEBZJS_DIR" apply --unidiff-zero --reverse --check "$PATCH_FILE" >/dev/null 2>&1; then
-  echo "bootstrap-webzjs: source patch already applied"
-elif git -C "$WEBZJS_DIR" apply --unidiff-zero --check "$PATCH_FILE" >/dev/null 2>&1; then
-  git -C "$WEBZJS_DIR" apply --unidiff-zero "$PATCH_FILE"
-  echo "bootstrap-webzjs: source patch applied"
-else
-  fail "source patch does not apply cleanly to WebZjs $WEBZJS_COMMIT"
-fi
+for PATCH in "$PATCH_FILE" "$MEMO_PATCH_FILE"; do
+  if git -C "$WEBZJS_DIR" apply --unidiff-zero --reverse --check "$PATCH" >/dev/null 2>&1; then
+    echo "bootstrap-webzjs: source patch already applied: $(basename "$PATCH")"
+  elif git -C "$WEBZJS_DIR" apply --unidiff-zero --check "$PATCH" >/dev/null 2>&1; then
+    git -C "$WEBZJS_DIR" apply --unidiff-zero "$PATCH"
+    echo "bootstrap-webzjs: source patch applied: $(basename "$PATCH")"
+  else
+    fail "source patch does not apply cleanly to WebZjs $WEBZJS_COMMIT: $PATCH"
+  fi
+done
 
 mapfile -t PATCHED_FILES < <(git -C "$WEBZJS_DIR" diff --name-only)
-[[ "${#PATCHED_FILES[@]}" -eq 2 ]] ||
+[[ "${#PATCHED_FILES[@]}" -eq 3 ]] ||
   fail "WebZjs contains unexpected modified files"
 [[ "${PATCHED_FILES[0]}" == "crates/webzjs-wallet/src/bindgen/transaction_history.rs" ]] ||
   fail "unexpected first WebZjs modified file: ${PATCHED_FILES[0]}"
 [[ "${PATCHED_FILES[1]}" == "crates/webzjs-wallet/src/bindgen/wallet.rs" ]] ||
   fail "unexpected second WebZjs modified file: ${PATCHED_FILES[1]}"
+[[ "${PATCHED_FILES[2]}" == "crates/webzjs-wallet/src/wallet.rs" ]] ||
+  fail "unexpected third WebZjs modified file: ${PATCHED_FILES[2]}"
 
 echo "bootstrap-webzjs: building keys"
 (cd "$WEBZJS_DIR" && just build-keys)

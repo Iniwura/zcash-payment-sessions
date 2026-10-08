@@ -7,7 +7,7 @@ request generation and exact received-output observation from WebZjs.
 
 The repository does not depend on a sibling checkout or on published WebZjs packages. The
 bootstrap script creates an ignored `.deps/WebZjs` checkout at the exact pinned commit, applies
-the tracked compatibility patch, builds only `webzjs-keys`, `webzjs-requests`, and
+the tracked compatibility patches, builds only `webzjs-keys`, `webzjs-requests`, and
 `webzjs-wallet`, verifies the generated package names and versions, and installs the local
 runtime packages with `npm ci`.
 
@@ -31,9 +31,13 @@ From a clean clone:
 npm run bootstrap:webzjs
 ```
 
-The source patch is [patches/webzjs-wallet-received-payments.patch](patches/webzjs-wallet-received-payments.patch).
-It adds the exact received-output API needed by the payment matcher while leaving the pinned
-WebZjs checkout untracked and disposable. Generated WASM artifacts are intentionally not
+The source patches are [patches/webzjs-wallet-received-payments.patch](patches/webzjs-wallet-received-payments.patch)
+and [patches/webzjs-wallet-memo-transfer.patch](patches/webzjs-wallet-memo-transfer.patch). The
+first adds the exact received-output API needed by the payment matcher. The second adds only the
+testnet proof tooling's `propose_transfer_with_memo` method; the stock WebZjs
+`propose_transfer` method remains memo-less. The ZIP-321 sender adapter parses the URI with the
+generated requests package and passes the exact memo bytes to that additive method. The pinned
+WebZjs checkout remains untracked and disposable. Generated WASM artifacts are intentionally not
 committed.
 
 To verify the checkout without rebuilding it:
