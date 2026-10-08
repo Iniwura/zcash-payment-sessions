@@ -7,3 +7,6 @@ examples/checkout/public/webzjs-wallet/
 .env
 .env.*
 !.env.example
+# Local testnet-only credential material must remain outside the repository.
+*.seed.bin
+testnet-seed.bin

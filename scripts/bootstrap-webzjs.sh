@@ -95,6 +95,8 @@ mapfile -t PATCHED_FILES < <(git -C "$WEBZJS_DIR" diff --name-only)
 [[ "${PATCHED_FILES[1]}" == "crates/webzjs-wallet/src/bindgen/wallet.rs" ]] ||
   fail "unexpected second WebZjs modified file: ${PATCHED_FILES[1]}"
 
+echo "bootstrap-webzjs: building keys"
+(cd "$WEBZJS_DIR" && just build-keys)
 echo "bootstrap-webzjs: building requests"
 (cd "$WEBZJS_DIR" && just build-requests)
 echo "bootstrap-webzjs: building wallet"
@@ -106,6 +108,7 @@ const path = require("node:path");
 
 const webzjsDir = process.argv[2];
 const expected = [
+  ["packages/webzjs-keys/package.json", "@chainsafe/webzjs-keys"],
   ["packages/webzjs-requests/package.json", "@chainsafe/webzjs-requests"],
   ["packages/webzjs-wallet/package.json", "@chainsafe/webzjs-wallet"]
 ];

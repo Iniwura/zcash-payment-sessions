@@ -59,6 +59,7 @@ if (changedFiles.join(String.fromCharCode(10)) !==
 }
 
 const packages = [
+  ["packages/webzjs-keys", "@chainsafe/webzjs-keys"],
   ["packages/webzjs-requests", "@chainsafe/webzjs-requests"],
   ["packages/webzjs-wallet", "@chainsafe/webzjs-wallet"]
 ];
@@ -115,5 +116,5 @@ for (const file of trackedFiles) {
 
 console.log(
   "reproducibility verified: WebZjs " + expectedCommit +
-    ", patch applied, requests/wallet packages at 0.1.0"
+    ", patch applied, keys/requests/wallet packages at 0.1.0"
 );

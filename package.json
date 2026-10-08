@@ -25,6 +25,7 @@
     "verify:reproducibility": "node scripts/verify-reproducibility.mjs",
     "test:consumer": "node scripts/consumer-smoke.mjs",
     "demo:prepare": "node scripts/prepare-demo-webzjs.mjs",
+    "derive:testnet-ufvk": "node scripts/derive-testnet-ufvk.mjs",
     "demo:dev": "npm run demo:prepare && vite --config examples/checkout/vite.config.ts",
     "demo:build": "npm run demo:prepare && vite build --config examples/checkout/vite.config.ts",
     "demo:typecheck": "tsc -p examples/checkout/tsconfig.json --noEmit",

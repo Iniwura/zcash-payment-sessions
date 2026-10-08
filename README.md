@@ -7,8 +7,9 @@ request generation and exact received-output observation from WebZjs.
 
 The repository does not depend on a sibling checkout or on published WebZjs packages. The
 bootstrap script creates an ignored `.deps/WebZjs` checkout at the exact pinned commit, applies
-the tracked compatibility patch, builds only `webzjs-requests` and `webzjs-wallet`, verifies the
-generated package names and versions, and installs the local packages with `npm ci`.
+the tracked compatibility patch, builds only `webzjs-keys`, `webzjs-requests`, and
+`webzjs-wallet`, verifies the generated package names and versions, and installs the local
+runtime packages with `npm ci`.
 
 Prerequisites:
 
@@ -40,6 +41,17 @@ To verify the checkout without rebuilding it:
 ```sh
 npm run verify:reproducibility
 ```
+
+The generated developer-only keys package is `@chainsafe/webzjs-keys@0.1.0`. The generic helper
+`scripts/derive-testnet-ufvk.mjs` uses Node OS randomness for a caller-provided 32-byte seed file,
+constructs the pinned WebZjs testnet key API, and prints only the resulting `uview...` UFVK:
+
+```sh
+node scripts/derive-testnet-ufvk.mjs <path-to-testnet-seed.bin>
+```
+
+It never calls WebZjs `generate_seed_phrase()` and is not a runtime dependency of the checkout.
+Keep any testnet seed outside the repository with restrictive permissions.
 
 ## Development
 
