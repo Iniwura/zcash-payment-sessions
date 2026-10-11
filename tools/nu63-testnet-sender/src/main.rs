@@ -17,7 +17,7 @@ use zcash_client_backend::{
         wallet::{
             ConfirmationsPolicy,
             input_selection::{
-                GreedyInputSelector, SpendPolicy, TransparentSpendPolicy,
+                GreedyInputSelector, SpendPolicy,
             },
             propose_transfer, create_proposed_transactions,
         },
@@ -27,7 +27,7 @@ use zcash_client_backend::{
     proto::{
         compact_formats::CompactBlock,
         service::{
-            self, BlockId, Empty, GetAddressUtxosArg, RawTransaction,
+            self, BlockId, Empty, RawTransaction,
             compact_tx_streamer_client::CompactTxStreamerClient,
         },
     },
@@ -390,53 +390,42 @@ fn parse_request(uri: &str, memo_text: &str, recipient_sapling: &str) -> Result<
     Ok(request)
 }
 
-async fn assert_canonical_utxo(
-    client: &mut CompactTxStreamerClient<tonic::transport::Channel>,
-    sender_text: &str,
+fn assert_sapling_input<NoteRef: Copy + std::fmt::Debug>(
+    proposal: &zcash_client_backend::proposal::Proposal<StandardFeeRule, NoteRef>,
     funding_txid: TxId,
-    config: Config,
-) -> Result<u32> {
-    let reply = client
-        .get_address_utxos(GetAddressUtxosArg {
-            addresses: vec![sender_text.to_owned()],
-            start_height: u32::from(config.birthday) as u64,
-            max_entries: 0,
-        })
-        .await?
-        .into_inner();
-    let matches: Vec<_> = reply
-        .address_utxos
-        .into_iter()
-        .filter(|utxo| utxo.txid.as_slice() == funding_txid.as_ref())
-        .filter(|utxo| utxo.address == sender_text)
-        .filter(|utxo| utxo.value_zat == config.funding_value.into_u64() as i64)
-        .collect();
-    ensure!(matches.len() == 1, "canonical funding UTXO was not uniquely located");
-    let utxo = &matches[0];
-    ensure!(utxo.height == u32::from(config.funding_height) as u64, "funding height mismatch");
-    println!("FUNDING_OUTPOINT={}:{}", funding_txid, utxo.index);
-    println!("FUNDING_HEIGHT={}", utxo.height);
-    println!("FUNDING_VALUE_ZAT={}", utxo.value_zat);
-    Ok(utxo.index as u32)
+    funding_index: u32,
+    funding_height: BlockHeight,
+    funding_value: Zatoshis,
+) -> Result<()> {
+    let step = proposal.steps().first();
+    ensure!(step.transparent_inputs().is_empty(), "proposal selected an unexpected transparent input");
+    let shielded_inputs = step
+        .shielded_inputs()
+        .ok_or_else(|| anyhow!("proposal selected no Sapling input"))?;
+    ensure!(shielded_inputs.notes().len() == 1, "proposal selected an unexpected number of Sapling inputs");
+    let input = &shielded_inputs.notes()[0];
+    ensure!(input.txid() == &funding_txid, "proposal selected the wrong Sapling funding transaction");
+    ensure!(u32::from(input.output_index()) == funding_index, "proposal selected the wrong Sapling funding output");
+    ensure!(input.note().value() == funding_value, "proposal selected the wrong Sapling funding value");
+    ensure!(input.mined_height() == Some(funding_height), "Sapling funding height mismatch");
+    println!("FUNDING_OUTPOINT={}:{}", funding_txid, funding_index);
+    println!("FUNDING_POOL=Sapling");
+    println!("FUNDING_HEIGHT={}", u32::from(funding_height));
+    println!("FUNDING_VALUE_ZAT={}", funding_value.into_u64());
+    Ok(())
 }
 
 fn assert_proposal<NoteRef: Copy>(
     proposal: &zcash_client_backend::proposal::Proposal<StandardFeeRule, NoteRef>,
     request: &TransactionRequest,
-    sender_taddr: TransparentAddress,
-    funding_txid: TxId,
-    funding_index: u32,
     branch: BranchId,
 ) -> Result<(Zatoshis, Zatoshis)> {
     ensure!(proposal.steps().len() == 1, "payment requires exactly one transaction step");
     let step = proposal.steps().first();
     ensure!(step.transaction_request() == request, "proposal request differs from parsed ZIP-321 request");
     ensure!(step.payment_pools().values().all(|pool| *pool == zcash_protocol::PoolType::Shielded(ShieldedPool::Sapling)), "payment was not assigned to Sapling");
-    ensure!(step.transparent_inputs().len() == 1, "proposal selected an unexpected number of transparent inputs");
-    let input = &step.transparent_inputs()[0];
-    ensure!(input.outpoint().txid() == &funding_txid, "proposal selected the wrong funding transaction");
-    ensure!(input.outpoint().n() == funding_index, "proposal selected the wrong funding output");
-    ensure!(input.recipient_address() == &sender_taddr, "proposal selected the wrong transparent sender address");
+    ensure!(step.transparent_inputs().is_empty(), "proposal selected an unexpected transparent input");
+    ensure!(step.shielded_inputs().is_some(), "proposal selected no Sapling input");
     let change = step.balance().proposed_change();
     ensure!(change.len() == 1, "proposal created unexpected change outputs");
     ensure!(change[0].output_pool() == zcash_protocol::PoolType::Shielded(ShieldedPool::Sapling), "proposal created non-Sapling change");
@@ -455,7 +444,7 @@ async fn run_live(args: Args, broadcast: bool) -> Result<()> {
     let network = Network::TestNetwork;
     let sender_usk = read_sender_usk(&args.mnemonic_path, &network)?;
     let recipient_ufvk = read_recipient_ufvk(&args.recipient_seed_path, &network)?;
-    let (sender_text, sender_taddr, recipient_sapling) = public_addresses(&sender_usk, &recipient_ufvk, &network)?;
+    let (sender_text, _sender_taddr, recipient_sapling) = public_addresses(&sender_usk, &recipient_ufvk, &network)?;
     let phrase = fs::read_to_string(&args.mnemonic_path)?;
     let mnemonic = Mnemonic::<English>::from_phrase(phrase.trim())
         .map_err(|_| anyhow!("sender credential is not a valid BIP39 mnemonic"))?;
@@ -472,7 +461,6 @@ async fn run_live(args: Args, broadcast: bool) -> Result<()> {
     let request = parse_request(uri, memo, &recipient_sapling)?;
     let (mut db, account_id) = open_and_sync(&args.db_path, &sender_seed, &network, &mut client, args.config).await?;
 
-    let funding_index = assert_canonical_utxo(&mut client, &sender_text, args.funding_txid, args.config).await?;
     let input_selector = GreedyInputSelector::new();
     let change_strategy = SingleOutputChangeStrategy::new(
         StandardFeeRule::Zip317,
@@ -480,8 +468,7 @@ async fn run_live(args: Args, broadcast: bool) -> Result<()> {
         ShieldedPool::Sapling,
         DustOutputPolicy::default(),
     );
-    let spend_policy = SpendPolicy::shielded_pools([ShieldedPool::Sapling])
-        .with_transparent(TransparentSpendPolicy::from_one_address(sender_taddr));
+    let spend_policy = SpendPolicy::shielded_pools([ShieldedPool::Sapling]);
     let proposal = propose_transfer::<
         _,
         _,
@@ -501,12 +488,17 @@ async fn run_live(args: Args, broadcast: bool) -> Result<()> {
         None,
     )
     .map_err(|error| anyhow!("current-consensus proposal failed: {error:?}"))?;
+    let funding_index = 0;
+    assert_sapling_input(
+        &proposal,
+        args.funding_txid,
+        funding_index,
+        args.config.funding_height,
+        args.config.funding_value,
+    )?;
     let (fee, change_value) = assert_proposal(
         &proposal,
         &request,
-        sender_taddr,
-        args.funding_txid,
-        funding_index,
         branch,
     )?;
     println!("LIGHTWALLETD_TIP={}", u32::from(tip));
@@ -550,7 +542,7 @@ async fn run_live(args: Args, broadcast: bool) -> Result<()> {
     transaction.write(&mut raw)?;
     let parsed = Transaction::read(raw.as_slice(), branch)?;
     ensure!(parsed.txid() == txid, "serialized transaction txid mismatch");
-    ensure!(parsed.transparent_bundle().is_some(), "transaction has no transparent input bundle");
+    ensure!(parsed.transparent_bundle().is_none(), "transaction unexpectedly has a transparent input bundle");
     ensure!(parsed.sapling_bundle().is_some(), "transaction has no Sapling output bundle");
     ensure!(parsed.orchard_bundle().is_none(), "transaction unexpectedly contains an Orchard bundle");
     println!("PREBROADCAST_TXID={txid}");

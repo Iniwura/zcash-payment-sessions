@@ -126,6 +126,22 @@ describe("current-consensus Sapling memo hydration", () => {
     ]);
   });
 
+  it("normalizes runtime WebZjs numeric values before joining hydrated evidence", async () => {
+    const wallet = new FakeWallet();
+    wallet.payments = [
+      compactPayment({ value: 10_000 as unknown as bigint })
+    ];
+
+    await expect(sourceFor(wallet).list()).resolves.toMatchObject([
+      {
+        paymentId: PAYMENT_ID,
+        amountZatoshis: 10_000n,
+        memo: MEMO,
+        pool: "sapling"
+      }
+    ]);
+  });
+
   it("does not attach evidence for a wrong output index or value", async () => {
     const wallet = new FakeWallet();
     wallet.payments = [compactPayment()];

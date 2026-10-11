@@ -120,8 +120,11 @@ export class WebZjsPaymentSource {
     );
 
     try {
+      const payments = response.payments
+        .map(normalizeWebZjsReceivedPayment)
+        .filter((payment): payment is WebZjsReceivedPayment => payment !== undefined);
       const hydratedPayments = await Promise.all(
-        response.payments.map(async (payment) => {
+        payments.map(async (payment) => {
           if (this.hydrator === undefined || payment.memo !== undefined) {
             return payment;
           }
@@ -155,6 +158,24 @@ export class WebZjsPaymentSource {
       response.free?.();
     }
   }
+}
+
+function normalizeWebZjsReceivedPayment(
+  payment: WebZjsReceivedPayment
+): WebZjsReceivedPayment | undefined {
+  if (typeof payment.value === "bigint") {
+    return payment;
+  }
+
+  if (
+    typeof payment.value !== "number" ||
+    !Number.isSafeInteger(payment.value) ||
+    payment.value < 0
+  ) {
+    return undefined;
+  }
+
+  return { ...payment, value: BigInt(payment.value) };
 }
 
 function mapWebZjsStatus(
