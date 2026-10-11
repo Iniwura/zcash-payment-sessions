@@ -7,6 +7,7 @@ WEBZJS_COMMIT="a50df944c32243cb8da9f86e7d52cb65ac926439"
 WEBZJS_DIR="${WEBZJS_DIR:-$ROOT_DIR/.deps/WebZjs}"
 PATCH_FILE="$ROOT_DIR/patches/webzjs-wallet-received-payments.patch"
 MEMO_PATCH_FILE="$ROOT_DIR/patches/webzjs-wallet-memo-transfer.patch"
+RAW_TRANSACTION_PATCH_FILE="$ROOT_DIR/patches/webzjs-wallet-raw-transaction.patch"
 RUST_TOOLCHAIN="nightly-2025-01-07"
 
 fail() {
@@ -29,6 +30,7 @@ require_command cargo
 
 [[ -f "$PATCH_FILE" ]] || fail "missing patch artifact: $PATCH_FILE"
 [[ -f "$MEMO_PATCH_FILE" ]] || fail "missing patch artifact: $MEMO_PATCH_FILE"
+[[ -f "$RAW_TRANSACTION_PATCH_FILE" ]] || fail "missing patch artifact: $RAW_TRANSACTION_PATCH_FILE"
 
 echo "bootstrap-webzjs: node $(node --version), npm $(npm --version)"
 echo "bootstrap-webzjs: clang $(clang --version | head -n 1)"
@@ -80,7 +82,7 @@ fi
 [[ "$(git -C "$WEBZJS_DIR" rev-parse HEAD)" == "$WEBZJS_COMMIT" ]] ||
   fail "WebZjs HEAD verification failed"
 
-for PATCH in "$PATCH_FILE" "$MEMO_PATCH_FILE"; do
+for PATCH in "$PATCH_FILE" "$MEMO_PATCH_FILE" "$RAW_TRANSACTION_PATCH_FILE"; do
   if git -C "$WEBZJS_DIR" apply --unidiff-zero --reverse --check "$PATCH" >/dev/null 2>&1; then
     echo "bootstrap-webzjs: source patch already applied: $(basename "$PATCH")"
   elif git -C "$WEBZJS_DIR" apply --unidiff-zero --check "$PATCH" >/dev/null 2>&1; then

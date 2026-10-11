@@ -26,15 +26,26 @@ import {
   type Zip321OtherParams
 } from "./zip321.js";
 import {
+  mergeHydratedReceivedPayment,
   WebZjsPaymentSource,
+  type HydratedReceivedPaymentEvidence,
+  type WebZjsPaymentHydrator,
   type WebZjsReceivedPayment,
   type WebZjsReceivedPaymentResponse,
+  type WebZjsRawTransaction,
+  type WebZjsRawTransactionFetcher,
   type WebZjsWalletLike
 } from "./wallet.js";
+export {
+  createSaplingMemoHydrator,
+  type SaplingMemoHydratorModule,
+  type SaplingMemoHydratorOptions
+} from "./memo-hydration.js";
 export {
   proposeZip321Transfer,
   type WebZjsMemoSenderWallet
 } from "./sender.js";
+export { mergeHydratedReceivedPayment };
 
 const URI_PREFIX = "zcash-payment-session-uri:";
 
@@ -43,6 +54,7 @@ export interface ZcashPaymentSessionsOptions {
   recipientAddress: string;
   wallet?: WebZjsWalletLike;
   accountId?: number;
+  paymentHydrator?: WebZjsPaymentHydrator;
   requiredConfirmations?: number;
   now?: () => number;
   wasmInput?: InitInput | Promise<InitInput>;
@@ -91,7 +103,8 @@ export class ZcashPaymentSessions {
         ? undefined
         : new WebZjsPaymentSource(
             options.wallet,
-            options.accountId ?? 0
+            options.accountId ?? 0,
+            options.paymentHydrator
           );
 
     return new ZcashPaymentSessions(
@@ -164,9 +177,13 @@ export class ZcashPaymentSessions {
 
 export type {
   KeyValueStorage,
+  HydratedReceivedPaymentEvidence,
   PaymentObservationResult,
   WebZjsReceivedPayment,
   WebZjsReceivedPaymentResponse,
+  WebZjsPaymentHydrator,
+  WebZjsRawTransaction,
+  WebZjsRawTransactionFetcher,
   WebZjsWalletLike,
   Zip321OtherParams
 };

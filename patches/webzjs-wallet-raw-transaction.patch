@@ -1,0 +1,43 @@
+diff --git a/crates/webzjs-wallet/src/bindgen/wallet.rs b/crates/webzjs-wallet/src/bindgen/wallet.rs
+--- a/crates/webzjs-wallet/src/bindgen/wallet.rs
++++ b/crates/webzjs-wallet/src/bindgen/wallet.rs
+@@ -2,0 +3 @@
++use js_sys::{Object, Reflect, Uint8Array};
+@@ -19,0 +21 @@
++    self,
+@@ -648,0 +651,35 @@
++    }
++
++    /// Fetch the complete serialized transaction and its mined height without parsing it in
++    /// the pinned WebZjs transaction crate. Consumers may pass the bytes to a newer,
++    /// consensus-current parser in an isolated browser WASM module.
++    pub async fn get_transaction(&self, txid: Vec<u8>) -> Result<JsValue, Error> {
++        if txid.len() != 32 {
++            return Err(Error::TxIdParse);
++        }
++
++        let response = self
++            .client()
++            .get_transaction(service::TxFilter {
++                block: None,
++                index: 0,
++                hash: txid,
++            })
++            .await?
++            .into_inner();
++
++        let object = Object::new();
++        Reflect::set(
++            &object,
++            &JsValue::from_str("data"),
++            &Uint8Array::from(response.data.as_slice()).into(),
++        )
++        .map_err(Error::from)?;
++        Reflect::set(
++            &object,
++            &JsValue::from_str("height"),
++            &JsValue::from_f64(response.height as f64),
++        )
++        .map_err(Error::from)?;
++
++        Ok(object.into())

@@ -1,0 +1,29 @@
+[package]
+name = "nu63-testnet-sender"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+publish = false
+
+[dependencies]
+anyhow = "1"
+async-trait = "0.1"
+bip0039 = "0.12"
+futures-util = "0.3"
+hex = "0.4"
+rand = "0.10"
+rusqlite = "0.37"
+rustls = { version = "0.23", features = ["ring"] }
+secrecy = "0.8"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+tonic = { version = "0.14", features = ["transport", "tls-webpki-roots"] }
+
+zcash_client_backend = { git = "https://github.com/zcash/librustzcash.git", rev = "3c76c2d822446a68b67cd25692aaf92b4f6cb98c", features = ["sync", "lightwalletd-tonic-transport", "lightwalletd-tonic-tls-webpki-roots", "transparent-inputs"] }
+zcash_client_sqlite = { git = "https://github.com/zcash/librustzcash.git", rev = "3c76c2d822446a68b67cd25692aaf92b4f6cb98c", features = ["transparent-inputs"] }
+zcash_keys = { git = "https://github.com/zcash/librustzcash.git", rev = "3c76c2d822446a68b67cd25692aaf92b4f6cb98c", features = ["transparent-inputs"] }
+zcash_primitives = { git = "https://github.com/zcash/librustzcash.git", rev = "3c76c2d822446a68b67cd25692aaf92b4f6cb98c", features = ["transparent-inputs"] }
+zcash_protocol = { git = "https://github.com/zcash/librustzcash.git", rev = "3c76c2d822446a68b67cd25692aaf92b4f6cb98c", features = ["local-consensus"] }
+zcash_proofs = { git = "https://github.com/zcash/librustzcash.git", rev = "3c76c2d822446a68b67cd25692aaf92b4f6cb98c", features = ["bundled-prover"] }
+zcash_transparent = { git = "https://github.com/zcash/librustzcash.git", rev = "3c76c2d822446a68b67cd25692aaf92b4f6cb98c" }
+zip321 = { git = "https://github.com/zcash/librustzcash.git", rev = "3c76c2d822446a68b67cd25692aaf92b4f6cb98c" }
+zip32 = "0.3"

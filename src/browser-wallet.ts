@@ -2,6 +2,7 @@ import type { WebWallet } from "@chainsafe/webzjs-wallet";
 import type { KeyValueStorage } from "./storage.js";
 import type {
   WebZjsReceivedPaymentResponse,
+  WebZjsRawTransaction,
   WebZjsWalletLike
 } from "./wallet.js";
 
@@ -120,6 +121,15 @@ export class WebZjsBrowserWallet implements WebZjsWalletLike {
   ): Promise<WebZjsReceivedPaymentResponse> {
     this.assertOpen();
     return this.wallet.get_received_payments(accountId);
+  }
+
+  async get_transaction(txid: Uint8Array): Promise<WebZjsRawTransaction> {
+    this.assertOpen();
+    const raw = await this.wallet.get_transaction(txid);
+    return {
+      data: raw.data,
+      height: Number(raw.height)
+    };
   }
 
   async getState(): Promise<BrowserWalletState> {

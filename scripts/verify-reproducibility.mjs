@@ -10,7 +10,8 @@ const expectedCommit =
   "a50df944c32243cb8da9f86e7d52cb65ac926439";
 const patches = [
   resolve(root, "patches/webzjs-wallet-received-payments.patch"),
-  resolve(root, "patches/webzjs-wallet-memo-transfer.patch")
+  resolve(root, "patches/webzjs-wallet-memo-transfer.patch"),
+  resolve(root, "patches/webzjs-wallet-raw-transaction.patch")
 ];
 
 function fail(message) {
@@ -86,8 +87,9 @@ const walletDeclaration = readFileSync(
   resolve(webzjs, "packages/webzjs-wallet/webzjs_wallet.d.ts"),
   "utf8"
 );
-if (!walletDeclaration.includes("propose_transfer_with_memo")) {
-  fail("generated wallet declaration is missing propose_transfer_with_memo");
+if (!walletDeclaration.includes("propose_transfer_with_memo") ||
+    !walletDeclaration.includes("get_transaction(txid")) {
+  fail("generated wallet declaration is missing the required memo/raw transaction methods");
 }
 
 const packageJson = JSON.parse(

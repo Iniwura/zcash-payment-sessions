@@ -21,6 +21,7 @@ Prerequisites:
 - `wasm-pack`
 - `rustup` and `cargo`
 - Rust nightly `nightly-2025-01-07` with `wasm32-unknown-unknown` and `rust-src`
+- Rust stable `1.89.0` with `wasm32-unknown-unknown` for the current-consensus hydrator
 
 The script never changes the global Rust default and never invokes `sudo`. If a prerequisite is
 missing, it stops with the exact local installation command to run.
@@ -32,13 +33,24 @@ npm run bootstrap:webzjs
 ```
 
 The source patches are [patches/webzjs-wallet-received-payments.patch](patches/webzjs-wallet-received-payments.patch)
-and [patches/webzjs-wallet-memo-transfer.patch](patches/webzjs-wallet-memo-transfer.patch). The
+and [patches/webzjs-wallet-memo-transfer.patch](patches/webzjs-wallet-memo-transfer.patch), plus
+[patches/webzjs-wallet-raw-transaction.patch](patches/webzjs-wallet-raw-transaction.patch). The
 first adds the exact received-output API needed by the payment matcher. The second adds only the
 testnet proof tooling's `propose_transfer_with_memo` method; the stock WebZjs
 `propose_transfer` method remains memo-less. The ZIP-321 sender adapter parses the URI with the
 generated requests package and passes the exact memo bytes to that additive method. The pinned
 WebZjs checkout remains untracked and disposable. Generated WASM artifacts are intentionally not
 committed.
+
+When compact WebZjs observations do not contain a memo because the pinned transaction parser
+cannot decode a newer consensus transaction, the public adapter can be given
+`createSaplingMemoHydrator(...)`. It fetches complete bytes through WebZjs `get_transaction` and
+uses the separately built browser-compatible `wasm/sapling-memo-hydrator` module. The hydrator is
+opt-in, performs no transaction parsing in TypeScript, and only returns evidence after exact
+transaction/output/value checks. Build it with `bash scripts/build-sapling-memo-hydrator.sh`;
+it uses stable Rust 1.89 and the current-consensus librustzcash revision recorded in its manifest.
+See [LIVE_TESTNET_PROOF.md](LIVE_TESTNET_PROOF.md) for the verified V6 testnet evidence and the
+expired-session outcome.
 
 To verify the checkout without rebuilding it:
 
