@@ -15,6 +15,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -49,6 +51,27 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist-demo
+
+      # Build a second time with the root URL base required by Vercel.
+      # This is a compiled, public static artifact; no wallet secrets are bundled.
+      - name: Build Vercel static checkout
+        run: GITHUB_ACTIONS=false npm run demo:build
+
+      - name: Publish Vercel static artifact branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          STAGE="$(mktemp -d)"
+          cp -a dist-demo/. "$STAGE/"
+          cd "$STAGE"
+          git init -q -b vercel-static
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "build(vercel): ${GITHUB_SHA}"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force --quiet origin HEAD:refs/heads/vercel-static
 
   deploy:
     environment:
