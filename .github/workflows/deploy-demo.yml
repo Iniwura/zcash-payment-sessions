@@ -38,7 +38,9 @@ jobs:
         run: npm run bootstrap:webzjs
 
       - name: Build reference checkout
-        run: npm run demo:build
+        run: |
+          npm run build
+          npm run demo:build
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
