@@ -8,6 +8,7 @@ import {
 import { CheckoutDemoController } from "./controller.js";
 import { createPaymentQrSvg } from "./qr.js";
 import { SimulatedWallet } from "./simulated-wallet.js";
+import { getRealTestnetModeAvailability } from "./runtime-capabilities.js";
 import {
   DEFAULT_TESTNET_GRPC_WEB_ENDPOINT,
   parseTestnetBirthday
@@ -39,6 +40,8 @@ const elements = {
   copyUri: required<HTMLButtonElement>("copy-uri"),
   countdown: required<HTMLElement>("countdown"),
   errorMessage: required<HTMLElement>("error-message"),
+  modeTestnet: required<HTMLButtonElement>("mode-testnet"),
+  realModeNotice: required<HTMLElement>("real-mode-notice"),
   realConfig: required<HTMLElement>("real-config"),
   simulationControls: required<HTMLElement>("simulation-controls"),
   amountInput: required<HTMLInputElement>("amount-input"),
@@ -65,6 +68,7 @@ const elements = {
 
 let runtime: Runtime | undefined;
 let mode: DemoMode = "simulation";
+const realTestnetMode = getRealTestnetModeAvailability(window.crossOriginIsolated);
 
 const sessionStorage: KeyValueStorage = {
   getItem: (key) => window.localStorage.getItem(`checkout:${key}`),
@@ -208,6 +212,11 @@ async function selectMode(nextMode: DemoMode): Promise<void> {
     return;
   }
 
+  if (!realTestnetMode.realTestnetEnabled) {
+    render();
+    return;
+  }
+
   runtime?.browserWallet?.close();
   runtime = undefined;
   mode = "testnet";
@@ -216,6 +225,11 @@ async function selectMode(nextMode: DemoMode): Promise<void> {
 
 async function openTestnetWallet(): Promise<void> {
   clearError();
+  if (!realTestnetMode.realTestnetEnabled) {
+    render();
+    return;
+  }
+
   try {
     elements.openTestnet.disabled = true;
     runtime = await openTestnetRuntime();
@@ -346,6 +360,9 @@ function render(
   elements.sessionBadge.dataset.status = session?.status ?? "READY";
   elements.modeBadge.textContent = mode === "simulation" ? "Demo simulation" : "Real testnet";
   elements.detailMode.textContent = mode === "simulation" ? "Demo simulation" : "Real testnet";
+  elements.modeTestnet.disabled = !realTestnetMode.realTestnetEnabled;
+  elements.realModeNotice.textContent = realTestnetMode.notice;
+  elements.realModeNotice.classList.toggle("hidden", realTestnetMode.notice.length === 0);
   elements.amountDisplay.textContent = session === null ? "—" : formatZec(session.amountZatoshis);
   elements.recipientDisplay.textContent = session === null
     ? "Create a session to derive the payment request."

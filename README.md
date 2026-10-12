@@ -75,6 +75,10 @@ lifecycle without a wallet, funds, or a private endpoint. Its explicit Real test
 view-only and requires a user-provided testnet UFVK, birthday, and browser-compatible gRPC-Web
 endpoint. It never accepts or logs a seed or spending key.
 
+The public GitHub Pages build cannot provide COOP/COEP headers, so it keeps deterministic simulation
+fully enabled and gates Real testnet mode. Real testnet mode remains available from a self-hosted
+deployment with those headers; see the [verified live testnet proof](LIVE_TESTNET_PROOF.md).
+
 ## Reproducible WebZjs setup
 
 The repository does not depend on a sibling checkout or on published WebZjs packages. The

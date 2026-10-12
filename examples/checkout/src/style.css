@@ -62,6 +62,7 @@ input { padding: 11px 12px; font-size: 0.84rem; }
 .mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 20px; padding: 4px; border: 1px solid #273552; border-radius: 11px; background: #0d1425; }
 .mode-button, .scenario-button { border: 1px solid transparent; border-radius: 8px; background: transparent; color: #8694b4; padding: 9px 10px; font-size: 0.74rem; font-weight: 760; }
 .mode-button.active { border-color: #3d4f80; background: #202d53; color: #d9e1ff; }
+.compatibility-note { margin: -6px 0 20px; padding: 11px 12px; border: 1px solid #3c4c75; border-radius: 10px; background: #141f39; color: #b9c8f2; font-size: 0.73rem; line-height: 1.5; }
 .real-config { margin-bottom: 20px; padding: 14px; border: 1px solid #35476c; border-radius: 12px; background: #101b35; }
 .config-note { margin-bottom: 15px; color: #aab6d0; font-size: 0.74rem; line-height: 1.5; }
 .real-config input { margin-bottom: 13px; }

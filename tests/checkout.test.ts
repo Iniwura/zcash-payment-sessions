@@ -6,6 +6,10 @@ import {
   type CheckoutViewState
 } from "../examples/checkout/src/controller.js";
 import { SimulatedWallet } from "../examples/checkout/src/simulated-wallet.js";
+import {
+  REAL_TESTNET_MODE_NOTICE,
+  getRealTestnetModeAvailability
+} from "../examples/checkout/src/runtime-capabilities.js";
 import { createPaymentQrSvg } from "../examples/checkout/src/qr.js";
 import type {
   WebZjsReceivedPayment,
@@ -94,6 +98,19 @@ async function createController(options: {
 }
 
 describe("checkout demo public-SDK integration", () => {
+  it("gates real testnet mode without browser isolation and keeps simulation available", () => {
+    expect(getRealTestnetModeAvailability(false)).toEqual({
+      realTestnetEnabled: false,
+      simulationEnabled: true,
+      notice: REAL_TESTNET_MODE_NOTICE
+    });
+    expect(getRealTestnetModeAvailability(true)).toEqual({
+      realTestnetEnabled: true,
+      simulationEnabled: true,
+      notice: ""
+    });
+  });
+
   it("creates a session through the public facade", async () => {
     const { controller } = await createController();
 
