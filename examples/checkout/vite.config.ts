@@ -45,6 +45,9 @@ function rewriteWebZjsWalletPackageRoot(
 
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
+  base: process.env.GITHUB_ACTIONS === "true"
+    ? "/zcash-payment-sessions/"
+    : "/",
   plugins: [webzjsWalletPackageRoot, webzjsWalletBrowserImport],
   server: {
     headers: browserIsolationHeaders

@@ -54,6 +54,7 @@ const elements = {
   timeline: required<HTMLOListElement>("timeline"),
   exceptionState: required<HTMLElement>("exception-state"),
   detailSession: required<HTMLElement>("detail-session"),
+  detailMemo: required<HTMLElement>("detail-memo"),
   detailPayment: required<HTMLElement>("detail-payment"),
   detailTxid: required<HTMLElement>("detail-txid"),
   detailConfirmations: required<HTMLElement>("detail-confirmations"),
@@ -352,6 +353,7 @@ function render(
   elements.uriDisplay.value = session?.paymentUri ?? "";
   elements.copyUri.disabled = session === null;
   elements.detailSession.textContent = session?.id ?? "—";
+  elements.detailMemo.textContent = session?.memo ?? "—";
   elements.detailPayment.textContent = payment?.paymentId ?? "—";
   elements.detailTxid.textContent = payment?.txid ?? "—";
   elements.detailConfirmations.textContent = payment === undefined ? "—" : String(payment.confirmations);

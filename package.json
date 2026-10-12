@@ -1,7 +1,15 @@
 {
   "name": "zcash-payment-sessions",
   "version": "1.0.0",
-  "description": "",
+  "description": "Persistent, replay-safe ZIP-321 payment sessions for browser Zcash applications",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Iniwura/zcash-payment-sessions.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Iniwura/zcash-payment-sessions/issues"
+  },
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {

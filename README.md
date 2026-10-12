@@ -1,7 +1,79 @@
 # Zcash Payment Sessions
 
-Zcash Payment Sessions provides durable application-level payment sessions backed by ZIP-321
-request generation and exact received-output observation from WebZjs.
+Zcash Payment Sessions is a browser SDK that turns a ZIP-321 payment request into a persistent,
+replay-safe payment lifecycle.
+
+```text
+AWAITING_PAYMENT -> DETECTED -> CONFIRMING -> PAID
+```
+
+ZIP-321 tells a wallet what to pay. An application still needs to know whether the exact payment
+arrived, whether its amount and memo match, whether it has enough confirmations, whether the
+request expired, whether it was already consumed, and whether the result survives a reload.
+
+The SDK provides ZIP-321 request generation through WebZjs, persistent payment sessions, exact
+amount and memo correlation, stable `txid + pool + output index` identities, confirmation
+progression, expiry, reorg-safe states, local current-consensus Sapling memo hydration, a
+consumed-payment ledger, duplicate-credit prevention, and cross-session replay protection.
+
+## Public SDK in one minute
+
+The integration uses only the package facade. Wallet creation and transport setup are application
+responsibilities; a WebZjs-compatible wallet adapter supplies received payments to `refresh()`.
+
+```ts
+import { ZcashPaymentSessions } from "zcash-payment-sessions";
+
+const sdk = await ZcashPaymentSessions.create({
+  storage: localStorage,
+  recipientAddress: "ztestsapling1...",
+  wallet: webzjsWallet,
+  accountId: 1,
+  requiredConfirmations: 2
+});
+
+const session = await sdk.createSession({
+  amountZatoshis: 10_000n,
+  memo: "order-123",
+  expiresInMs: 2 * 60 * 60 * 1000
+});
+
+console.log(session.paymentUri); // render as a QR or copyable ZIP-321 URI
+const result = await sdk.refresh(session.id);
+console.log(result.session?.status, result.observation.outcome);
+```
+
+The public surface also exports `WebZjsBrowserWallet`, `createSaplingMemoHydrator`,
+`decodeZip321Uri`, `proposeZip321Transfer`, and the public observation/session types.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  App[Browser checkout or merchant app] --> SDK[ZcashPaymentSessions facade]
+  SDK --> ZIP[WebZjs requests WASM\nZIP-321 URI]
+  SDK --> Store[Persistent session + consumed ledger]
+  SDK --> Monitor[Exact matcher + confirmations]
+  Monitor --> Source[WebZjs received-payment adapter]
+  Source --> Wallet[WebZjsBrowserWallet]
+  Wallet --> DB[Serialized wallet database]
+  Wallet --> Transport[Browser gRPC-Web lightwalletd endpoint]
+  Source -. missing V6 memo .-> Hydrator[Local current-consensus\nSapling memo hydrator]
+```
+
+## Judge-first links
+
+- [Public GitHub repository](https://github.com/Iniwura/zcash-payment-sessions)
+- [Public reference checkout](https://iniwura.github.io/zcash-payment-sessions/)
+- [Live testnet proof](LIVE_TESTNET_PROOF.md)
+- [Threat model and limitations](docs/THREAT_MODEL.md)
+- [Three-minute reviewer guide](docs/REVIEWER_GUIDE.md)
+- [Reference checkout source](examples/checkout)
+
+The reference checkout opens in deterministic simulation mode, so reviewers can exercise the full
+lifecycle without a wallet, funds, or a private endpoint. Its explicit Real testnet mode is
+view-only and requires a user-provided testnet UFVK, birthday, and browser-compatible gRPC-Web
+endpoint. It never accepts or logs a seed or spending key.
 
 ## Reproducible WebZjs setup
 
@@ -137,3 +209,7 @@ worker pool and `SharedArrayBuffer`; without them the browser wallet cannot init
 The app is a reference implementation rather than a claim of a live testnet payment. Configure a
 verified endpoint, import a testnet UFVK, and fund a testnet account before exercising real sync
 and matching.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
