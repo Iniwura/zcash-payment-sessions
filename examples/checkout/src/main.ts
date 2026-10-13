@@ -311,6 +311,11 @@ async function runGuidedCheckout(): Promise<void> {
     elements.guideStatus.textContent = "STEP 01 / PREPARING A FRESH REQUEST";
     await createSession();
     if (runtime?.controller.view.session?.status !== "AWAITING_PAYMENT") return;
+    document.getElementById("timeline")?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "center"
+    });
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 650));
     const steps = [
       { scenario: "exact", label: "STEP 02 / EXACT OUTPUT DETECTED" },
       { scenario: "confirming", label: "STEP 03 / CONFIRMATIONS ACCUMULATING" },
@@ -320,12 +325,6 @@ async function runGuidedCheckout(): Promise<void> {
       elements.guideStatus.textContent = step.label;
       await runScenario(step.scenario);
       await new Promise<void>((resolve) => window.setTimeout(resolve, 900));
-    }
-    if (window.innerWidth < 900) {
-      document.getElementById("timeline")?.scrollIntoView({
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
-        block: "center"
-      });
     }
   } catch (error) {
     showError(error);
@@ -432,6 +431,9 @@ function render(
     : `Recipient · ${runtime?.recipientAddress ?? "configured wallet address"}`;
   elements.uriDisplay.value = session?.paymentUri ?? "";
   elements.copyUri.disabled = session === null;
+  elements.createSession.innerHTML = session === null
+    ? 'Create payment session <span aria-hidden="true">↗</span>'
+    : 'Create another request <span aria-hidden="true">↗</span>';
   elements.detailSession.textContent = session?.id ?? "—";
   elements.detailMemo.textContent = session?.memo ?? "—";
   elements.detailPayment.textContent = payment?.paymentId ?? "—";
