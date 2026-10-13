@@ -7,6 +7,7 @@ import {
 } from "zcash-payment-sessions";
 import { CheckoutDemoController } from "./controller.js";
 import { createPaymentQrSvg } from "./qr.js";
+import { describeSessionException } from "./ui-state.js";
 import { SimulatedWallet } from "./simulated-wallet.js";
 import { getRealTestnetModeAvailability } from "./runtime-capabilities.js";
 import {
@@ -418,15 +419,7 @@ function renderException(
   status: PublicPaymentSession["status"] | undefined,
   observation: PaymentObservationResult | undefined
 ): void {
-  const text = status === "AMBIGUOUS"
-    ? `Ambiguous: ${observation?.candidates?.length ?? 0} exact outputs found. No credit was applied.`
-    : status === "REORGED"
-      ? "Reorg detected. The session is waiting for the payment to be observed again."
-      : status === "EXPIRED"
-        ? "This session expired. Late payments are not matched."
-        : observation?.outcome === "ALREADY_CONSUMED"
-          ? `Payment already consumed by ${observation.consumedBySessionId ?? "another session"}.`
-          : "";
+  const text = describeSessionException(status, observation);
   elements.exceptionState.textContent = text;
   elements.exceptionState.classList.toggle("hidden", text.length === 0);
 }
