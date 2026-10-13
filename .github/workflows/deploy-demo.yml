@@ -39,9 +39,16 @@ jobs:
       - name: Build pinned WebZjs packages and install dependencies
         run: npm run bootstrap:webzjs
 
+      - name: Verify SDK, UI contracts, types and consumer integration
+        run: |
+          npm test
+          npm run typecheck
+          npm run build
+          npm run test:consumer
+          npm run demo:typecheck
+
       - name: Build reference checkout
         run: |
-          npm run build
           npm run demo:build
 
       - name: Configure Pages
