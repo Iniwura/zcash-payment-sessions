@@ -77,6 +77,14 @@ const sessionStorage: KeyValueStorage = {
   removeItem: (key) => window.localStorage.removeItem(`checkout:${key}`)
 };
 
+// Keep reviewer simulation state separate from real chain observation state.
+// A simulated checkout must never be restored into a view-only testnet wallet.
+const testnetSessionStorage: KeyValueStorage = {
+  getItem: (key) => window.localStorage.getItem(`checkout:testnet:${key}`),
+  setItem: (key, value) => window.localStorage.setItem(`checkout:testnet:${key}`, value),
+  removeItem: (key) => window.localStorage.removeItem(`checkout:testnet:${key}`)
+};
+
 const walletStorage: KeyValueStorage = {
   getItem: (key) => window.localStorage.getItem(`wallet:${key}`),
   setItem: (key, value) => window.localStorage.setItem(`wallet:${key}`, value),
@@ -153,13 +161,13 @@ async function openTestnetRuntime(): Promise<Runtime> {
 
     const recipientAddress = await browserWallet.getCurrentAddress();
     const sdk = await ZcashPaymentSessions.create({
-      storage: sessionStorage,
+      storage: testnetSessionStorage,
       recipientAddress,
       wallet: browserWallet,
       accountId,
       requiredConfirmations: 2
     });
-    const controller = new CheckoutDemoController(sdk, sessionStorage);
+    const controller = new CheckoutDemoController(sdk, testnetSessionStorage);
     await controller.restore();
 
     return {
