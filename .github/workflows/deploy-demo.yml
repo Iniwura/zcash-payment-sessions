@@ -64,6 +64,41 @@ jobs:
       - name: Build Vercel static checkout
         run: GITHUB_ACTIONS=false npm run demo:build
 
+      - name: Browser smoke and responsive screenshots
+        run: |
+          set -euo pipefail
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          mkdir -p visual-audit
+          npm run demo:preview -- --host 127.0.0.1 --port 4173 > /tmp/zps-vite-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:4173/ > /tmp/zps-page.html; then break; fi
+            sleep 1
+          done
+          grep -q "ZPS" /tmp/zps-page.html
+          "$BROWSER" --headless --no-sandbox --disable-dev-shm-usage --disable-gpu --hide-scrollbars --virtual-time-budget=5000 --window-size=1440,900 --screenshot="$PWD/visual-audit/desktop-1440.png" http://127.0.0.1:4173/ > /tmp/zps-browser-desktop.log 2>&1
+          "$BROWSER" --headless --no-sandbox --disable-dev-shm-usage --disable-gpu --hide-scrollbars --virtual-time-budget=5000 --window-size=390,844 --screenshot="$PWD/visual-audit/mobile-390.png" http://127.0.0.1:4173/ > /tmp/zps-browser-mobile.log 2>&1
+          test -s visual-audit/desktop-1440.png
+          test -s visual-audit/mobile-390.png
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+          for name in ("desktop-1440.png", "mobile-390.png"):
+              blob = (Path("visual-audit") / name).read_bytes()
+              assert blob[:8] == b"\x89PNG\r\n\x1a\n"
+              width, height = struct.unpack(">II", blob[16:24])
+              assert width > 0 and height > 0
+              print(f"{name}: {width}x{height}")
+          PY
+
+      - name: Publish browser screenshots for visual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: zps-visual-audit
+          path: visual-audit/*.png
+          retention-days: 14
+
       - name: Publish Vercel static artifact branch
         env:
           GH_TOKEN: ${{ github.token }}
