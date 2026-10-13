@@ -63,7 +63,8 @@ def acceptance(browser, width: int, height: int) -> None:
     page.locator("#reset-demo").click()
     expect(status).to_have_text("AWAITING PAYMENT", timeout=30000)
     expect(page.locator("#qr-frame svg")).to_have_count(1)
-    page.locator("#simulation-controls summary").click()
+    if page.locator("#simulation-controls").get_attribute("open") is None:
+        page.locator("#simulation-controls summary").click()
     page.locator('[data-scenario="ambiguous"]').click()
     expect(page.locator("#exception-state")).to_contain_text("Ambiguous", timeout=15000)
     expect(status).to_have_text("AWAITING PAYMENT")
