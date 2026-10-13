@@ -42,6 +42,10 @@ def acceptance(browser, width: int, height: int) -> None:
         doc_width = page.evaluate("document.documentElement.scrollWidth")
         assert doc_width <= width + 2, f"Horizontal overflow: {doc_width}px at {width}px"
 
+    page.evaluate("document.activeElement.blur()")
+    page.screenshot(
+        path=str(OUT / f"landing-{width}.png"), animations="disabled", timeout=30000
+    )
     page.locator("#checkout").screenshot(
         path=str(OUT / f"checkout-{width}.png"), animations="disabled", timeout=30000
     )
