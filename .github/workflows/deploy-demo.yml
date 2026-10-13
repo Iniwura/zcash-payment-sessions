@@ -64,6 +64,21 @@ jobs:
       - name: Build Vercel static checkout
         run: GITHUB_ACTIONS=false npm run demo:build
 
+      - name: Browser interaction acceptance
+        run: |
+          set -euo pipefail
+          python3 -m venv /tmp/zps-browser-acceptance
+          /tmp/zps-browser-acceptance/bin/python -m pip install --disable-pip-version-check --quiet playwright==1.55.0
+          mkdir -p visual-audit
+          GITHUB_ACTIONS=false npm run demo:preview -- --host 127.0.0.1 --port 4173 > /tmp/zps-acceptance-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:4173/ > /dev/null; then break; fi
+            sleep 1
+          done
+          /tmp/zps-browser-acceptance/bin/python scripts/browser-checkout-smoke.py
+
       - name: Browser smoke and responsive screenshots
         # Screenshot tooling can fail on hosted runners despite a valid built application.
         # Keep the release unblocked; retain logs and upload any captures for review.
