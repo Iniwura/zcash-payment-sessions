@@ -64,7 +64,8 @@ flowchart LR
 ## Judge-first links
 
 - [Public GitHub repository](https://github.com/Iniwura/zcash-payment-sessions)
-- [Public reference checkout](https://iniwura.github.io/zcash-payment-sessions/)
+- [Interactive checkout and product site (Vercel)](https://zcash-payment-sessions.vercel.app/)
+- [Fallback reference checkout (GitHub Pages)](https://iniwura.github.io/zcash-payment-sessions/)
 - [Live testnet proof](LIVE_TESTNET_PROOF.md)
 - [Threat model and limitations](docs/THREAT_MODEL.md)
 - [Three-minute reviewer guide](docs/REVIEWER_GUIDE.md)

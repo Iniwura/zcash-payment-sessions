@@ -362,8 +362,11 @@ function render(
   elements.sessionBadge.dataset.status = session?.status ?? "READY";
   const frame = document.querySelector<HTMLElement>(".checkout-frame");
   if (frame !== null) frame.dataset.sessionState = session?.status ?? "READY";
-  document.getElementById("mode-simulation")?.classList.toggle("active", mode === "simulation");
+  const simulationModeButton = document.getElementById("mode-simulation");
+  simulationModeButton?.classList.toggle("active", mode === "simulation");
+  simulationModeButton?.setAttribute("aria-pressed", String(mode === "simulation"));
   elements.modeTestnet.classList.toggle("active", mode === "testnet");
+  elements.modeTestnet.setAttribute("aria-pressed", String(mode === "testnet"));
   elements.modeBadge.textContent = mode === "simulation" ? "Demo simulation" : "Real testnet";
   elements.detailMode.textContent = mode === "simulation" ? "Demo simulation" : "Real testnet";
   elements.modeTestnet.disabled = !realTestnetMode.realTestnetEnabled;
