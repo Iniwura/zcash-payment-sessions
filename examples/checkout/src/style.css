@@ -442,3 +442,62 @@ textarea { min-height: 82px; padding: 13px; resize: vertical; overflow-wrap: any
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+
+/* Judge-first experience: real SDK session prepared immediately; simulations stay labeled. */
+.reviewer-start {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(270px, .75fr);
+  align-items: center;
+  gap: clamp(24px, 5vw, 80px);
+  border: 1px solid var(--ink);
+  background: #e7e3d8;
+  padding: clamp(26px, 3.2vw, 54px);
+  margin: 0 0 20px;
+}
+.reviewer-start .eyebrow { font-size: 11px; color: #4b4a42; letter-spacing: .035em; }
+.reviewer-start h3 { font-size: clamp(31px, 3.5vw, 58px); letter-spacing: -.075em; line-height: 1.03; margin: 0 0 17px; max-width: 660px; }
+.reviewer-start p { color: #424039; max-width: 640px; font-size: clamp(14px, 1.15vw, 17px); line-height: 1.55; margin: 0; }
+.reviewer-start-action { display: flex; flex-direction: column; gap: 17px; }
+.guide-button { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 24px 22px; width: 100%; background: #151513; color: #fffdf5; border: 1px solid #151513; font-size: clamp(15px, 1.3vw, 18px); font-weight: 800; text-align: left; transition: background .2s, transform .2s; }
+.guide-button:not(:disabled):hover { background: #39372d; transform: translateY(-2px); }
+.guide-button span { font-size: 25px; color: var(--acid); }
+.guide-button:disabled { opacity: .5; }
+.guide-status { display: block; color: #444239; font-size: 10px; line-height: 1.55; min-height: 2.6em; }
+.scenario-summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 15px; border-bottom: 1px solid #6e6c5f; padding: 0 0 20px; }
+.scenario-summary::-webkit-details-marker { display: none; }
+.scenario-summary > span { font: 11px/1.4 var(--code); color: #c7c5bc; }
+.scenario-summary strong { color: #fff; font-size: 13px; white-space: nowrap; }
+.scenario-summary strong span { display: inline-block; font-size: 19px; color: var(--acid); margin-left: 5px; transition: transform .2s; }
+.simulation-card[open] .scenario-summary strong span { transform: rotate(45deg); }
+.simulation-card > .card-heading { padding-top: 26px; }
+.simulation-card .simulation-description { font-size: 13px; line-height: 1.6; color: #c3c1b7; }
+.qr-frame { border: 2px solid var(--ink); }
+.qr-stage { background: #e2dfd4; }
+.details-grid dd { overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  .reviewer-start { grid-template-columns: 1fr; gap: 24px; }
+  .checkout-grid > .control-column { order: 1; }
+  .checkout-grid > .checkout-card { order: 2; }
+  .checkout-frame[data-session-state="PAID"] .checkout-card { box-shadow: inset 0 0 0 3px var(--acid); }
+}
+@media (max-width: 620px) {
+  .workbench { padding-top: 36px; }
+  .workbench-heading { margin-bottom: 28px; }
+  .reviewer-start { padding: 24px 19px; margin: 0 0 12px; }
+  .reviewer-start .eyebrow { font-size: 10px; }
+  .reviewer-start h3 { font-size: clamp(34px, 9vw, 46px); }
+  .reviewer-start p { font-size: 14px; }
+  .guide-button { min-height: 66px; padding: 18px; }
+  .guide-status { font-size: 10px; }
+  .controls-card, .simulation-card { padding: 22px 19px; }
+  .simulation-grid { grid-template-columns: 1fr 1fr; gap: 9px; }
+  .scenario-button { min-height: 47px; font-size: 11px; }
+  .scenario-summary { flex-wrap: wrap; }
+  .qr-stage { padding: 13px; }
+  .qr-frame { width: min(100%, 244px); }
+  .field-label { font-size: 11px; }
+  .timeline li { font-size: 11px; }
+  .details-grid dt { font-size: 10px; }
+  .details-grid dd { font-size: 11px; }
+}

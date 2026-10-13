@@ -6,6 +6,7 @@ import {
   type CheckoutViewState
 } from "../examples/checkout/src/controller.js";
 import { SimulatedWallet } from "../examples/checkout/src/simulated-wallet.js";
+import { prepareReviewerSession } from "../examples/checkout/src/reviewer-session.js";
 import {
   REAL_TESTNET_MODE_NOTICE,
   getRealTestnetModeAvailability
@@ -110,6 +111,19 @@ describe("checkout demo public-SDK integration", () => {
       simulationEnabled: true,
       notice: ""
     });
+  });
+
+  it("prepares a starter checkout only once through the real public SDK", async () => {
+    const { controller } = await createController();
+    expect(controller.view.session).toBeNull();
+    await prepareReviewerSession(controller);
+    const session = controller.view.session;
+    expect(session?.status).toBe("AWAITING_PAYMENT");
+    expect(session?.amountZatoshis).toBe(10_000n);
+    expect(session?.memo).toBe("order-123");
+    expect(session?.paymentUri).toMatch(/^zcash:/);
+    await prepareReviewerSession(controller);
+    expect(controller.view.session?.id).toBe(session?.id);
   });
 
   it("creates a session through the public facade", async () => {

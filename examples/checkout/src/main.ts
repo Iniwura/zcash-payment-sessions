@@ -6,6 +6,7 @@ import {
   type PublicPaymentSession
 } from "zcash-payment-sessions";
 import { CheckoutDemoController } from "./controller.js";
+import { prepareReviewerSession } from "./reviewer-session.js";
 import { createPaymentQrSvg } from "./qr.js";
 import { describeSessionException } from "./ui-state.js";
 import { SimulatedWallet } from "./simulated-wallet.js";
@@ -42,6 +43,8 @@ const elements = {
   countdown: required<HTMLElement>("countdown"),
   errorMessage: required<HTMLElement>("error-message"),
   modeTestnet: required<HTMLButtonElement>("mode-testnet"),
+  guideRun: required<HTMLButtonElement>("guide-run"),
+  guideStatus: required<HTMLElement>("guide-status"),
   realModeNotice: required<HTMLElement>("real-mode-notice"),
   realConfig: required<HTMLElement>("real-config"),
   simulationControls: required<HTMLElement>("simulation-controls"),
@@ -69,6 +72,7 @@ const elements = {
 
 let runtime: Runtime | undefined;
 let mode: DemoMode = "simulation";
+let guidedRunActive = false;
 const realTestnetMode = getRealTestnetModeAvailability(window.crossOriginIsolated);
 
 const sessionStorage: KeyValueStorage = {
@@ -113,6 +117,7 @@ async function createSimulationRuntime(): Promise<Runtime> {
   });
   const controller = new CheckoutDemoController(sdk, sessionStorage);
   await controller.restore();
+  await prepareReviewerSession(controller);
 
   return {
     mode: "simulation",
@@ -207,6 +212,7 @@ function bindEvents(): void {
   });
   elements.openTestnet.addEventListener("click", () => void openTestnetWallet());
   elements.createSession.addEventListener("click", () => void createSession());
+  elements.guideRun.addEventListener("click", () => void runGuidedCheckout());
   elements.refreshStatus.addEventListener("click", () => void refreshStatus());
   elements.resetDemo.addEventListener("click", resetDemo);
   elements.copyUri.addEventListener("click", () => void copyUri());
@@ -267,6 +273,12 @@ async function createSession(): Promise<void> {
       runtime.simulationWallet.payments = [];
     }
     render(state.session, state.observation);
+    if (!guidedRunActive) {
+      elements.guideStatus.textContent = "REQUEST READY · RUN THE GUIDE OR EXPLORE THE EDGE CASES";
+      if (window.innerWidth < 900) {
+        elements.qrFrame.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
+      }
+    }
   } catch (error) {
     showError(error);
   }
@@ -288,6 +300,39 @@ async function refreshStatus(): Promise<void> {
     showError(error);
   } finally {
     elements.refreshStatus.disabled = false;
+  }
+}
+
+async function runGuidedCheckout(): Promise<void> {
+  if (guidedRunActive || mode !== "simulation" || runtime?.simulationWallet === undefined) return;
+  guidedRunActive = true;
+  elements.guideRun.disabled = true;
+  try {
+    elements.guideStatus.textContent = "STEP 01 / PREPARING A FRESH REQUEST";
+    await createSession();
+    if (runtime?.controller.view.session?.status !== "AWAITING_PAYMENT") return;
+    const steps = [
+      { scenario: "exact", label: "STEP 02 / EXACT OUTPUT DETECTED" },
+      { scenario: "confirming", label: "STEP 03 / CONFIRMATIONS ACCUMULATING" },
+      { scenario: "paid", label: "COMPLETE / PAID · REPLAY-SAFE SESSION" }
+    ];
+    for (const step of steps) {
+      elements.guideStatus.textContent = step.label;
+      await runScenario(step.scenario);
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 900));
+    }
+    if (window.innerWidth < 900) {
+      document.getElementById("timeline")?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+        block: "center"
+      });
+    }
+  } catch (error) {
+    showError(error);
+    elements.guideStatus.textContent = "WALKTHROUGH INTERRUPTED · RETRY";
+  } finally {
+    guidedRunActive = false;
+    elements.guideRun.disabled = mode !== "simulation";
   }
 }
 
@@ -346,6 +391,7 @@ function resetDemo(): void {
   void createSimulationRuntime().then((next) => {
     runtime = next;
     clearError();
+    elements.guideStatus.textContent = "FRESH REQUEST READY · SIMULATION";
     render();
   });
 }
@@ -396,6 +442,7 @@ function render(
   elements.lifecycleNote.textContent = session === null ? "Waiting for a session" : lifecycleNote(status);
   elements.realConfig.classList.toggle("hidden", mode !== "testnet");
   elements.simulationControls.classList.toggle("hidden", mode !== "simulation");
+  elements.guideRun.disabled = guidedRunActive || mode !== "simulation";
 
   if (session !== null) {
     elements.qrFrame.innerHTML = createPaymentQrSvg(session.paymentUri);
