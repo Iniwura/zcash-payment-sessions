@@ -28,7 +28,7 @@ describe("editorial checkout interface contract", () => {
       expect(html).toContain('data-scenario="' + scenario + '"');
       expect(js).toContain('case "' + scenario + '"');
     }
-    expect(html).toContain("Simulated data");
+    expect(html).toContain("simulated wallet adapter");
   });
 
   it("keeps verifiable evidence and safe disclosure visible", () => {
