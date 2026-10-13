@@ -149,9 +149,9 @@ Keep any testnet seed outside the repository with restrictive permissions.
 ## Development
 
 ```sh
+npm run build
 npm test
 npm run typecheck
-npm run build
 npm run test:consumer
 ```
 
@@ -182,6 +182,7 @@ Prepare and build the reference app from a clean checkout:
 ```sh
 npm run bootstrap:webzjs
 npm ci
+npm run build
 npm run demo:typecheck
 npm run demo:build
 npm run demo:dev

@@ -41,9 +41,9 @@ jobs:
 
       - name: Verify SDK, UI contracts, types and consumer integration
         run: |
-          npm test
           npm run typecheck
           npm run build
+          npm test
           npm run test:consumer
           npm run demo:typecheck
 
