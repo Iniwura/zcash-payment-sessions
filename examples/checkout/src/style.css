@@ -9,7 +9,7 @@
   --paper: #f0eee7;
   --ink: #151513;
   --line: #cecbc0;
-  --grey: #78776f;
+  --grey: #69665e;
   --acid: #eebc36;
   --pale: #e6e4dc;
   --code: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -82,7 +82,7 @@ h1,h2,h3 { font-weight: 800; }
 .art-stamp strong { font-family: "Manrope", sans-serif; font-size: 22px; line-height: 1.02; letter-spacing: -.065em; margin: 11px 0; }
 .art-index { position: absolute; left: 22px; bottom: 20px; font-size: 9px; z-index: 6; }
 .art-orbit { position: absolute; right: 4%; bottom: 5%; border-radius: 100%; width: 110px; height: 110px; display: grid; place-items: center; border: 2px solid var(--ink); font-size: 60px; z-index: 6; }
-.hero-bottom { padding: 15px 0 110px; color: #626058; }
+.hero-bottom { padding: 15px 0 110px; color: #54534c; }
 @keyframes revealBack { from { transform: translateY(95px) rotate(-41deg); opacity: 0; } to { transform: rotate(-23deg); opacity: 1; } }
 @keyframes revealMid { from { transform: translateY(130px) rotate(38deg); opacity: 0; } to { transform: rotate(17deg); opacity: 1; } }
 @keyframes revealFront { from { transform: translateY(150px) rotate(1deg); opacity: 0; } to { transform: rotate(-7deg); opacity: 1; } }
@@ -220,9 +220,9 @@ textarea { min-height: 82px; padding: 13px; resize: vertical; overflow-wrap: any
 .scenario-button:hover { background: #464439; border-color: var(--acid); }
 .timeline-card,.details-card { padding: 37px clamp(16px,2.5vw,40px); background: #e5e2d8; color: var(--ink); margin-top: 12px; }
 .timeline-card .card-heading,.details-card .card-heading { margin-bottom: 35px; }
-.lifecycle-note { font: 11px var(--code); color: #757167; }
+.lifecycle-note { font: 11px var(--code); color: #625f57; }
 .timeline { list-style: none; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 0; margin: 0; padding: 12px 0 0; }
-.timeline li { position: relative; display: flex; flex-direction: column; gap: 14px; font-size: 12px; font-weight: 800; letter-spacing: -.02em; color: #858175; }
+.timeline li { position: relative; display: flex; flex-direction: column; gap: 14px; font-size: 12px; font-weight: 800; letter-spacing: -.02em; color: #646158; }
 .timeline li:not(:last-child)::after { content:""; position:absolute; top: 9px; left: 16px; right: 8px; height: 1px; background: #aaa79b; }
 .timeline-node { width: 19px; height: 19px; display: block; border: 5px solid #aaa79b; background: #e5e2d8; border-radius: 50%; z-index:1; }
 .timeline li.complete,.timeline li.current { color: var(--ink); }
@@ -233,7 +233,7 @@ textarea { min-height: 82px; padding: 13px; resize: vertical; overflow-wrap: any
 .details-card { background: #eeece4; }
 .details-grid { margin: 0; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 32px 20px; }
 .details-grid div { min-width: 0; border-top: 1px solid #c2c0b5; padding-top: 14px; }
-.details-grid dt { text-transform: uppercase; color: #7e7b70; font-size: 10px; margin-bottom: 10px; }
+.details-grid dt { text-transform: uppercase; color: #646157; font-size: 10px; margin-bottom: 10px; }
 .details-grid dd { font: 11px/1.5 var(--code); margin: 0; overflow-wrap: anywhere; }
 .checkout-disclaimer { display: flex; justify-content: space-between; padding: 17px 2px 0; gap: 12px; font-size: 9px; color: #a5a294; }
 
