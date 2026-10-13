@@ -11,6 +11,7 @@ import {
   getRealTestnetModeAvailability
 } from "../examples/checkout/src/runtime-capabilities.js";
 import { createPaymentQrSvg } from "../examples/checkout/src/qr.js";
+import { describeSessionException } from "../examples/checkout/src/ui-state.js";
 import type {
   WebZjsReceivedPayment,
   WebZjsWalletLike
@@ -230,6 +231,8 @@ describe("checkout demo public-SDK integration", () => {
 
     expect(state.observation?.outcome).toBe("AMBIGUOUS");
     expect(state.session?.status).toBe("AWAITING_PAYMENT");
+    expect(describeSessionException(state.session?.status, state.observation))
+      .toContain("Ambiguous: 2 exact outputs found. No credit was applied.");
   });
 
   it("renders REORGED when a paid simulated output reorgs", async () => {
