@@ -72,14 +72,19 @@ jobs:
           set -euo pipefail
           BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           mkdir -p visual-audit
-          npm run demo:preview -- --host 127.0.0.1 --port 4173 > /tmp/zps-vite-preview.log 2>&1 &
+          GITHUB_ACTIONS=false npm run demo:preview -- --host 127.0.0.1 --port 4173 > /tmp/zps-vite-preview.log 2>&1 &
           PREVIEW_PID=$!
           trap 'kill "$PREVIEW_PID" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 35); do
             if curl -fsS http://127.0.0.1:4173/ > /tmp/zps-page.html; then break; fi
             sleep 1
           done
-          grep -q "ZPS" /tmp/zps-page.html
+          if ! grep -q "A request" /tmp/zps-page.html; then
+            echo "Unexpected preview HTML. Preview server logs:"
+            cat /tmp/zps-vite-preview.log
+            head -c 800 /tmp/zps-page.html
+            exit 1
+          fi
           if ! "$BROWSER" --headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu --hide-scrollbars --no-first-run --window-size=1440,900 --screenshot="$PWD/visual-audit/desktop-1440.png" http://127.0.0.1:4173/ > /tmp/zps-browser-desktop.log 2>&1; then
             cat /tmp/zps-browser-desktop.log
             exit 1
