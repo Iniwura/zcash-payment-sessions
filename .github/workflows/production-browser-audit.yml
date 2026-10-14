@@ -1,0 +1,103 @@
+name: Production browser audit (temporary)
+
+on:
+  push:
+    branches:
+      - audit/production-browser-20261014
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Use Python and Chromium
+        run: |
+          python3 -m pip install --user --quiet playwright==1.55.0
+          command -v google-chrome || command -v chromium || command -v chromium-browser
+          mkdir -p production-audit
+
+      - name: Test actual public Vercel checkout
+        env:
+          PRODUCTION_URL: https://zcash-payment-sessions.vercel.app/
+        run: |
+          python3 - <<'PY'
+          import os, shutil, json, traceback
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright, expect
+
+          url = os.environ["PRODUCTION_URL"]
+          output = Path("production-audit")
+          output.mkdir(exist_ok=True)
+          chrome = shutil.which("google-chrome") or shutil.which("chromium") or shutil.which("chromium-browser")
+          assert chrome, "Chromium executable not available"
+
+          with sync_playwright() as p:
+              browser = p.chromium.launch(executable_path=chrome, headless=True, args=["--no-sandbox","--disable-dev-shm-usage"])
+              for width, height in [(1440, 900), (390, 844)]:
+                  context = browser.new_context(viewport={"width":width,"height":height}, reduced_motion="reduce")
+                  page = context.new_page()
+                  issues = []
+                  responses = []
+                  page.on("pageerror", lambda err: issues.append(str(err)))
+                  page.on("console", lambda msg: issues.append("CONSOLE "+msg.text) if msg.type=="error" else None)
+                  page.on("response", lambda resp: responses.append({"url":resp.url,"status":resp.status}) if resp.status>=400 else None)
+                  try:
+                      res = page.goto(url, wait_until="domcontentloaded",timeout=45000)
+                      assert res and res.status==200, f"Page HTTP {res.status if res else None}"
+                      print("PAGE",width,"HTTP",res.status,"CROSS_ORIGIN_ISOLATED",page.evaluate("crossOriginIsolated"))
+                      print("DEFAULT MODE",page.locator("#mode-badge").inner_text())
+                      assert page.evaluate("crossOriginIsolated"), "Production lacks COOP/COEP browser isolation"
+                      expect(page.locator("#session-badge")).to_have_text("AWAITING PAYMENT",timeout=45000)
+                      expect(page.locator("#qr-frame svg")).to_have_count(1,timeout=15000)
+                      assert page.locator("#uri-display").input_value().startswith("zcash:")
+                      print("SAMPLE REQUEST GENERATED",width)
+                      page.screenshot(path=str(output/f"initial-{width}.png"),full_page=True,animations="disabled")
+                      page.locator("#guide-run").click(timeout=12000)
+                      expect(page.locator("#session-badge")).to_have_text("PAID",timeout=25000)
+                      expect(page.locator("#detail-confirmations")).to_have_text("2")
+                      old_id=page.locator("#detail-session").inner_text()
+                      print("PAID",width,old_id)
+                      page.screenshot(path=str(output/f"paid-{width}.png"),full_page=True,animations="disabled")
+                      page.reload(wait_until="domcontentloaded",timeout=45000)
+                      expect(page.locator("#session-badge")).to_have_text("PAID",timeout=45000)
+                      assert page.locator("#detail-session").inner_text()==old_id
+                      page.locator("#simulation-controls summary").click()
+                      page.locator('[data-scenario="reorg"]').click()
+                      expect(page.locator("#session-badge")).to_have_text("REORGED",timeout=12000)
+                      page.locator("#reset-demo").click()
+                      expect(page.locator("#session-badge")).to_have_text("AWAITING PAYMENT",timeout=12000)
+                      if page.locator("#simulation-controls").get_attribute("open") is None:
+                          page.locator("#simulation-controls summary").click()
+                      page.locator('[data-scenario="ambiguous"]').click()
+                      expect(page.locator("#exception-state")).to_contain_text("Ambiguous",timeout=12000)
+                      print("REORG AND AMBIGUITY",width)
+                      if width == 390:
+                          scrollwidth=page.evaluate("document.documentElement.scrollWidth")
+                          assert scrollwidth <= 392, f"mobile overflow {scrollwidth}"
+                      # Testnet requires an external gRPC-Web proxy and viewing key.
+                      page.locator("#mode-testnet").click()
+                      endpoint=page.locator("#lightwalletd-url").input_value()
+                      print("PUBLIC TESTNET DEFAULT ENDPOINT",repr(endpoint))
+                      assert not issues, "Browser errors: " + json.dumps(issues[:10])
+                      assert not [r for r in responses if r["status"]>=500], "Server errors: " + json.dumps(responses[:10])
+                      print("PASS",width,"network errors",len(responses))
+                  except Exception as err:
+                      page.screenshot(path=str(output/f"FAILED-{width}.png"),full_page=True,animations="disabled")
+                      print("FAIL",width,repr(err),"PAGE_ERRORS",json.dumps(issues[:20]),"HTTP_ERRORS",json.dumps(responses[:20]))
+                      raise
+                  finally:
+                      context.close()
+              browser.close()
+          PY
+
+      - name: Upload audit screenshots even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-browser-audit
+          path: production-audit/*
+          if-no-files-found: warn
+          retention-days: 7
