@@ -219,3 +219,17 @@ and matching.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Experimental public testnet transport
+
+The free testnet gRPC-Web gateway at `https://zps-testnet-gateway.onrender.com` has returned a successful `GetLightdInfo` response. This establishes connectivity, **not** successful payment observation. The checkout's experimental real testnet mode pre-fills this endpoint and loads the isolated current-consensus Sapling memo WASM from the same origin.
+
+To build this browser checkout locally, build both WebZjs and the hydrator first:
+
+```sh
+npm run bootstrap:webzjs
+bash scripts/build-sapling-memo-hydrator.sh
+npm run demo:build
+```
+
+A testnet UFVK is required each time the wallet is opened so the memo hydrator can decrypt Sapling outputs locally. The checkout does not persist an additional plaintext UFVK; the underlying view-only wallet database remains in local browser storage. A viewing key grants access to payment information, so use a dedicated throwaway testnet account. Never enter a spending key or mainnet viewing key. A correct real-payment lifecycle and memo matching still require live transaction verification; they are **not yet established by the public gateway test**.

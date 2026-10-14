@@ -100,9 +100,9 @@
                 <div class="mode-switch" role="group" aria-label="Demo mode"><button id="mode-simulation" class="mode-button active" type="button">Simulation</button><button id="mode-testnet" class="mode-button" type="button">Real testnet</button></div>
                 <p id="real-mode-notice" class="compatibility-note hidden" role="status"></p>
                 <div id="real-config" class="real-config hidden">
-                  <p class="config-note">View-only Zcash testnet observation. Requires a browser-compatible gRPC-Web endpoint; never enter spending keys.</p>
-                  <label class="field-label" for="lightwalletd-url">TESTNET GRPC-WEB ENDPOINT</label><input id="lightwalletd-url" type="url" value="http://127.0.0.1:18080" placeholder="https://your-proxy.example" autocomplete="off" />
-                  <label class="field-label" for="viewing-key">VIEW-ONLY UFVK</label><input id="viewing-key" type="password" placeholder="Optional with saved view-only account" autocomplete="off" />
+                  <p class="config-note">Experimental real Zcash testnet observation. The verified public gRPC-Web gateway is prefilled. A testnet Unified Full Viewing Key is required to verify shielded Sapling memos; never enter spending keys. A viewing key reveals wallet activity. It is used locally in this browser, not sent to the gateway.</p>
+                  <label class="field-label" for="lightwalletd-url">TESTNET GRPC-WEB ENDPOINT</label><input id="lightwalletd-url" type="url" value="https://zps-testnet-gateway.onrender.com" placeholder="https://your-proxy.example" autocomplete="off" />
+                  <label class="field-label" for="viewing-key">VIEW-ONLY UFVK</label><input id="viewing-key" type="password" placeholder="Required each time; view-only testnet key" autocomplete="off" />
                   <label class="field-label" for="birthday-height">ACCOUNT BIRTHDAY HEIGHT</label><input id="birthday-height" type="number" min="0" placeholder="Required for new account" />
                   <button id="open-testnet" class="button button-secondary full-width" type="button">Open view-only wallet ↗</button>
                 </div>

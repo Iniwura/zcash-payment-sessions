@@ -7,6 +7,7 @@ import {
 } from "zcash-payment-sessions";
 import { CheckoutDemoController } from "./controller.js";
 import { prepareReviewerSession } from "./reviewer-session.js";
+import { loadTestnetPaymentHydrator } from "./testnet-hydrator.js";
 import { createPaymentQrSvg } from "./qr.js";
 import { describeSessionException } from "./ui-state.js";
 import { SimulatedWallet } from "./simulated-wallet.js";
@@ -138,6 +139,13 @@ async function openTestnetRuntime(): Promise<Runtime> {
     throw new Error("Enter a verified browser-compatible testnet gRPC-web endpoint first");
   }
 
+  // Viewing material is handled only in memory for the active checkout.
+  // Do not send it to the gateway or persist it as application state.
+  const viewingKey = elements.viewingKey.value.trim();
+  if (viewingKey.length === 0) {
+    throw new Error("Enter your testnet view-only UFVK to verify shielded memos. Re-enter it whenever you reopen the wallet; never use a spending key.");
+  }
+
   const browserWallet = await WebZjsBrowserWallet.open({
     network: "test",
     lightwalletdUrl,
@@ -148,11 +156,6 @@ async function openTestnetRuntime(): Promise<Runtime> {
   try {
     let accountId = browserWallet.getAccountId();
     if (accountId === undefined) {
-      const viewingKey = elements.viewingKey.value;
-      if (viewingKey.trim().length === 0) {
-        throw new Error("Enter a testnet UFVK once to create the view-only account");
-      }
-
       const birthdayHeight = parseTestnetBirthday(
         elements.birthdayHeight.value
       );
@@ -161,15 +164,21 @@ async function openTestnetRuntime(): Promise<Runtime> {
         ufvk: viewingKey,
         birthdayHeight
       });
-      elements.viewingKey.value = "";
     }
 
+    // Current-consensus Sapling transaction parsing and trial decryption happen
+    // in the browser's isolated WASM module. Missing evidence fails closed.
+    const paymentHydrator = await loadTestnetPaymentHydrator(
+      browserWallet,
+      viewingKey
+    );
     const recipientAddress = await browserWallet.getCurrentAddress();
     const sdk = await ZcashPaymentSessions.create({
       storage: testnetSessionStorage,
       recipientAddress,
       wallet: browserWallet,
       accountId,
+      paymentHydrator,
       requiredConfirmations: 2
     });
     const controller = new CheckoutDemoController(sdk, testnetSessionStorage);
@@ -187,6 +196,9 @@ async function openTestnetRuntime(): Promise<Runtime> {
   } catch (error) {
     browserWallet.close();
     throw error;
+  } finally {
+    // Clear the field even if initialization fails.
+    elements.viewingKey.value = "";
   }
 }
 

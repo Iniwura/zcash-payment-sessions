@@ -1,5 +1,5 @@
 export const DEFAULT_TESTNET_GRPC_WEB_ENDPOINT =
-  "http://127.0.0.1:18080";
+  "https://zps-testnet-gateway.onrender.com";
 
 export function parseTestnetBirthday(value: string): number {
   const normalized = value.trim();
