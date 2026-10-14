@@ -1,0 +1,90 @@
+# Dedicated, non-custodial browser gateway for Zcash TESTNET ONLY.
+# Upstream is fixed; this is not an arbitrary gRPC proxy.
+static_resources:
+  listeners:
+    - name: zps_grpc_web
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 10000
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: zps_grpc_web
+                codec_type: AUTO
+                route_config:
+                  name: zps_testnet_routes
+                  virtual_hosts:
+                    - name: zcash_testnet
+                      domains: ["*"]
+                      cors:
+                        allow_origin_string_match:
+                          - exact: https://zcash-payment-sessions.vercel.app
+                          - exact: http://localhost:5173
+                          - exact: http://127.0.0.1:5173
+                        allow_methods: "GET,POST,OPTIONS"
+                        allow_headers: "content-type,x-grpc-web,x-user-agent,grpc-timeout,authorization,cache-control,keep-alive,x-accept-content-transfer-encoding,x-accept-response-streaming"
+                        expose_headers: "grpc-status,grpc-message"
+                        max_age: "3600"
+                      routes:
+                        - match:
+                            path: /healthz
+                          direct_response:
+                            status: 200
+                            body:
+                              inline_string: "gateway process online (does not prove upstream health)\n"
+                        - match:
+                            prefix: /cash.z.wallet.sdk.rpc.CompactTxStreamer/
+                          route:
+                            cluster: zcash_public_testnet
+                            host_rewrite_literal: testnet.zec.rocks
+                            timeout: 0s
+                        - match:
+                            prefix: /
+                          direct_response:
+                            status: 404
+                http_filters:
+                  - name: envoy.filters.http.grpc_web
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+    - name: zcash_public_testnet
+      connect_timeout: 8s
+      type: STRICT_DNS
+      dns_lookup_family: V4_ONLY
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: zcash_public_testnet
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: testnet.zec.rocks
+                      port_value: 443
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicit_http_config:
+            http2_protocol_options: {}
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+          sni: testnet.zec.rocks
+          common_tls_context:
+            validation_context:
+              trusted_ca:
+                filename: /etc/ssl/certs/ca-certificates.crt
+              match_typed_subject_alt_names:
+                - san_type: DNS
+                  matcher:
+                    exact: testnet.zec.rocks

@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: zps-testnet-gateway
+    runtime: docker
+    plan: free
+    dockerfilePath: ./gateway/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: off
