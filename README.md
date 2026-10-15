@@ -71,10 +71,12 @@ flowchart LR
 - [Three-minute reviewer guide](docs/REVIEWER_GUIDE.md)
 - [Reference checkout source](examples/checkout)
 
-The reference checkout opens in deterministic simulation mode, so reviewers can exercise the full
-lifecycle without a wallet, funds, or a private endpoint. Its explicit Real testnet mode is
-view-only and requires a user-provided testnet UFVK, birthday, and browser-compatible gRPC-Web
-endpoint. It never accepts or logs a seed or spending key.
+On the isolated Vercel deployment, the checkout opens in **Real testnet** mode. Connect a
+dedicated Zcash testnet view-only wallet using its UFVK and account birthday, then create a
+ZIP-321 request and sync to observe real chain data. The public Render gRPC-Web gateway is
+preconfigured; a real payment still requires a funded sender and live verification. No seed,
+spending key, or private key is accepted. The separate **Developer simulation** mode exercises
+lifecycle states without sending any funds.
 
 The public GitHub Pages build cannot provide COOP/COEP headers, so it keeps deterministic simulation
 fully enabled and gates Real testnet mode. Real testnet mode remains available from a self-hosted
@@ -188,18 +190,23 @@ npm run demo:build
 npm run demo:dev
 ```
 
-The default mode is deterministic simulation and requires no wallet, endpoint, or funds. It
-demonstrates exact detection, confirmation progression, duplicate refreshes, ambiguity, reorg,
-expiry, URI copy, QR rendering, and active-session restoration from browser storage.
+The default mode on the cross-origin-isolated Vercel deployment is real TESTNET, not simulation.
+It requires a view-only UFVK and wallet birthday before a request can be created. On GitHub
+Pages, where COOP/COEP headers are unavailable, real mode is gated and Developer simulation
+is selected instead. Simulation demonstrates detection, confirmation progression,
+duplicate refreshes, ambiguity, reorg, expiry, QR rendering and restoration without funds.
 
-The real mode is explicit and testnet-only. The reference app defaults to the verified local proxy
-URL `http://127.0.0.1:18080`, which forwards gRPC-Web to `testnet.zec.rocks:443`; it can be
-overridden for another browser-compatible proxy. A raw lightwalletd gRPC endpoint is not
+Real mode is testnet-only. The reference app defaults to
+`https://zps-testnet-gateway.onrender.com`, a free Envoy gRPC-Web gateway to a public
+testnet lightwalletd server. It can be overridden with another verified browser-compatible
+proxy. The gateway can sleep while idle and is not guaranteed to be continuously available. A raw lightwalletd gRPC endpoint is not
 interchangeable with the browser gRPC-web transport. The first view-only account import requires a
 user-provided testnet UFVK and an explicit account birthday height; no birthday is invented and no
 full-chain scan is started implicitly. The imported view-only wallet database is serialized
 through WebZjs `db_to_bytes()` and stored under a separate browser-storage key; the UFVK input is
-cleared after account creation and no seed or private key is accepted or logged.
+cleared after the wallet is opened, including initialization failures. No seed or private key
+is accepted or logged. A UFVK can reveal payment history and must be treated as private viewing
+material; use a dedicated testnet-only wallet.
 
 The browser adapter uses only the generated WebZjs public package. On first open it initializes
 the generated wallet WASM and its worker pool once, restores the serialized database if present,
@@ -222,7 +229,7 @@ MIT. See [LICENSE](LICENSE).
 
 ## Experimental public testnet transport
 
-The free testnet gRPC-Web gateway at `https://zps-testnet-gateway.onrender.com` has returned a successful `GetLightdInfo` response. This establishes connectivity, **not** successful payment observation. The checkout's experimental real testnet mode pre-fills this endpoint and loads the isolated current-consensus Sapling memo WASM from the same origin.
+The free testnet gRPC-Web gateway at `https://zps-testnet-gateway.onrender.com` has returned a successful `GetLightdInfo` response and the full historical shielded transaction at block `4490144`. A real browser also opened an ephemeral view-only testnet account, created a valid ZIP-321 request, and synchronized through the gateway. **These tests do not replace a new funded payment proof in the public checkout.** The checkout's experimental real testnet mode pre-fills this endpoint and loads the isolated current-consensus Sapling memo WASM from the same origin.
 
 To build this browser checkout locally, build both WebZjs and the hydrator first:
 
