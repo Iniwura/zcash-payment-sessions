@@ -26,6 +26,8 @@ jobs:
             envoyproxy/envoy:v1.36.11 -c /etc/envoy/envoy.yaml --mode validate
       - name: Verify live Render gateway reaches Zcash testnet
         run: python3 gateway/verify-upstream.py
+      - name: Retrieve historical shielded transaction bytes
+        run: python3 gateway/verify-historic-transaction.py
       - name: Check gateway has no wallet secrets
         run: |
           ! grep -R -i -E '(^|[[:space:]])(seed[[:space:]]*=|private_key[[:space:]]*=|ufvk[[:space:]]*=)' gateway
