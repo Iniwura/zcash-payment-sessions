@@ -111,8 +111,14 @@ def main() -> None:
             page.locator("#birthday-height").fill(str(birthday))
             page.locator("#open-testnet").click()
 
-            expect(page.locator("#error-message")).to_be_empty(timeout=120000)
-            expect(page.locator("#mode-badge")).to_have_text("Real testnet", timeout=120000)
+            # "Real testnet" mode is selected before the asynchronous WebZjs
+            # open finishes. A usable create button and explicit ready status
+            # are the actual readiness signal, not the mode badge.
+            expect(page.locator("#create-session")).to_be_enabled(timeout=120000)
+            expect(page.locator("#wallet-connection-status")).to_contain_text("wallet ready", timeout=120000)
+            expect(page.locator("#open-testnet")).to_be_enabled(timeout=10000)
+            expect(page.locator("#error-message")).to_be_empty()
+            expect(page.locator("#mode-badge")).to_have_text("Real testnet")
             # Opens a real view-only WebZjs account; no simulated wallet is used.
             page.locator("#create-session").click()
             expect(page.locator("#qr-frame svg")).to_have_count(1, timeout=45000)
