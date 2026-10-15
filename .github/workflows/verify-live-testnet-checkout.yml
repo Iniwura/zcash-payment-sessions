@@ -41,10 +41,28 @@ jobs:
           GITHUB_ACTIONS=false npm run demo:build
           test -s dist-demo/sapling-hydrator/sapling_memo_hydrator.js
           test -s dist-demo/sapling-hydrator/sapling_memo_hydrator_bg.wasm
-      - name: Browser acceptance (simulation regression)
+      - name: Prepare Chromium acceptance environment
         run: |
           python3 -m venv /tmp/zps-browser-tests
           /tmp/zps-browser-tests/bin/pip install playwright==1.55.0
+      - name: Real testnet browser wallet smoke (no funding or spend keys)
+        run: |
+          set -euo pipefail
+          KEY_DIR="$(mktemp -d)"
+          export ZPS_TEST_KEY_PATH="$KEY_DIR/testnet-ufvk.txt"
+          trap 'rm -rf "$KEY_DIR"' EXIT
+          node scripts/ci-create-testnet-viewing-key.mjs
+          GITHUB_ACTIONS=false npm run demo:preview -- --host 127.0.0.1 --port 5173 > /tmp/zps-testnet-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true; rm -rf "$KEY_DIR"' EXIT
+          for attempt in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:5173/ > /dev/null; then break; fi
+            sleep 1
+          done
+          /tmp/zps-browser-tests/bin/python scripts/browser-live-testnet-smoke.py
+
+      - name: Browser acceptance (simulation regression)
+        run: |
           GITHUB_ACTIONS=false npm run demo:preview -- --host 127.0.0.1 --port 4173 > /tmp/zps-preview.log 2>&1 &
           for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || sleep 1; done
           /tmp/zps-browser-tests/bin/python scripts/browser-checkout-smoke.py
