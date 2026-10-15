@@ -48,6 +48,7 @@ const elements = {
   guideStatus: required<HTMLElement>("guide-status"),
   realModeNotice: required<HTMLElement>("real-mode-notice"),
   realConfig: required<HTMLElement>("real-config"),
+  walletConnectionStatus: required<HTMLElement>("wallet-connection-status"),
   simulationControls: required<HTMLElement>("simulation-controls"),
   amountInput: required<HTMLInputElement>("amount-input"),
   memoInput: required<HTMLInputElement>("memo-input"),
@@ -74,6 +75,8 @@ const elements = {
 let runtime: Runtime | undefined;
 let mode: DemoMode = "simulation";
 let guidedRunActive = false;
+let openingTestnetWallet = false;
+let walletConnectionEpoch = 0;
 const realTestnetMode = getRealTestnetModeAvailability(window.crossOriginIsolated);
 
 const sessionStorage: KeyValueStorage = {
@@ -146,14 +149,14 @@ async function openTestnetRuntime(): Promise<Runtime> {
     throw new Error("Enter your testnet view-only UFVK to verify shielded memos. Re-enter it whenever you reopen the wallet; never use a spending key.");
   }
 
-  const browserWallet = await WebZjsBrowserWallet.open({
-    network: "test",
-    lightwalletdUrl,
-    storage: walletStorage,
-    storageKey: "testnet:db"
-  });
-
+  let browserWallet: WebZjsBrowserWallet | undefined;
   try {
+    browserWallet = await WebZjsBrowserWallet.open({
+      network: "test",
+      lightwalletdUrl,
+      storage: walletStorage,
+      storageKey: "testnet:db"
+    });
     let accountId = browserWallet.getAccountId();
     if (accountId === undefined) {
       const birthdayHeight = parseTestnetBirthday(
@@ -194,10 +197,10 @@ async function openTestnetRuntime(): Promise<Runtime> {
       recipientAddress
     };
   } catch (error) {
-    browserWallet.close();
+    browserWallet?.close();
     throw error;
   } finally {
-    // Clear the field even if initialization fails.
+    // Clear the input even when WebZjs initialization fails before wallet creation.
     elements.viewingKey.value = "";
   }
 }
@@ -231,11 +234,14 @@ function bindEvents(): void {
 }
 
 async function selectMode(nextMode: DemoMode): Promise<void> {
+  walletConnectionEpoch += 1;
+  openingTestnetWallet = false;
   clearError();
   if (nextMode === "simulation") {
     runtime?.browserWallet?.close();
     runtime = await createSimulationRuntime();
     mode = "simulation";
+    elements.walletConnectionStatus.textContent = "";
     render();
     return;
   }
@@ -248,25 +254,45 @@ async function selectMode(nextMode: DemoMode): Promise<void> {
   runtime?.browserWallet?.close();
   runtime = undefined;
   mode = "testnet";
+  elements.walletConnectionStatus.textContent = "Connect a view-only testnet wallet before creating a real payment request.";
   render(null, undefined);
 }
 
 async function openTestnetWallet(): Promise<void> {
+  if (openingTestnetWallet) return;
   clearError();
   if (!realTestnetMode.realTestnetEnabled) {
     render();
     return;
   }
 
+  const epoch = ++walletConnectionEpoch;
+  openingTestnetWallet = true;
+  elements.openTestnet.disabled = true;
+  elements.openTestnet.textContent = "Opening wallet…";
+  elements.walletConnectionStatus.textContent = "Opening the WebZjs view-only wallet and local memo verifier. This may take a moment.";
+  render();
   try {
-    elements.openTestnet.disabled = true;
-    runtime = await openTestnetRuntime();
-    mode = "testnet";
+    const next = await openTestnetRuntime();
+    if (epoch !== walletConnectionEpoch || mode !== "testnet") {
+      next.browserWallet?.close();
+      return;
+    }
+    runtime = next;
+    elements.walletConnectionStatus.textContent = "View-only testnet wallet ready. Create a real request, then refresh to scan the chain.";
     render();
   } catch (error) {
-    showError(error);
+    if (epoch === walletConnectionEpoch) {
+      elements.walletConnectionStatus.textContent = "Could not open the view-only wallet. Check the error and try again.";
+      showError(error);
+    }
   } finally {
-    elements.openTestnet.disabled = false;
+    if (epoch === walletConnectionEpoch) {
+      openingTestnetWallet = false;
+      elements.openTestnet.disabled = false;
+      elements.openTestnet.textContent = "Open view-only wallet ↗";
+      render();
+    }
   }
 }
 
@@ -442,6 +468,8 @@ function render(
     ? "Create a session to derive the payment request."
     : `Recipient · ${runtime?.recipientAddress ?? "configured wallet address"}`;
   elements.uriDisplay.value = session?.paymentUri ?? "";
+  elements.createSession.disabled = openingTestnetWallet || runtime === undefined || runtime.mode !== mode;
+  elements.refreshStatus.disabled = openingTestnetWallet || runtime === undefined || runtime.mode !== mode;
   elements.copyUri.disabled = session === null;
   elements.createSession.innerHTML = session === null
     ? 'Create payment session <span aria-hidden="true">↗</span>'
