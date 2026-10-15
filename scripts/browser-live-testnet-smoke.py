@@ -103,8 +103,9 @@ def main() -> None:
         try:
             page.goto(ORIGIN, wait_until="domcontentloaded", timeout=45000)
             assert page.evaluate("crossOriginIsolated"), "WebZjs thread isolation unavailable"
-            expect(page.locator("#session-badge")).to_have_text("AWAITING PAYMENT", timeout=45000)
-            page.locator("#mode-testnet").click()
+            expect(page.locator("#session-badge")).to_have_text("READY", timeout=45000)
+            if page.locator("#mode-badge").inner_text() != "Real testnet":
+                page.locator("#mode-testnet").click()
             expect(page.locator("#real-config")).to_be_visible()
             assert page.locator("#lightwalletd-url").input_value() == ENDPOINT
             page.locator("#viewing-key").fill(viewing_key)

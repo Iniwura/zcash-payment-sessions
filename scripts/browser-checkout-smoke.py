@@ -30,6 +30,8 @@ def acceptance(browser, width: int, height: int) -> None:
     response = page.goto(BASE, wait_until="domcontentloaded", timeout=30000)
     assert response is not None and response.status == 200
 
+    if page.locator("#mode-badge").inner_text() != "Demo simulation":
+        page.locator("#mode-simulation").click()
     status = page.locator("#session-badge")
     # The sample request comes from the public SDK and WASM ZIP-321 generator.
     expect(status).to_have_text("AWAITING PAYMENT", timeout=30000)

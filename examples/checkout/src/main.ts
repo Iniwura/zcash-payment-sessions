@@ -73,7 +73,7 @@ const elements = {
 };
 
 let runtime: Runtime | undefined;
-let mode: DemoMode = "simulation";
+let mode: DemoMode = window.crossOriginIsolated ? "testnet" : "simulation";
 let guidedRunActive = false;
 let openingTestnetWallet = false;
 let walletConnectionEpoch = 0;
@@ -206,7 +206,13 @@ async function openTestnetRuntime(): Promise<Runtime> {
 }
 
 async function initialize(): Promise<void> {
-  runtime = await createSimulationRuntime();
+  if (mode === "simulation") {
+    runtime = await createSimulationRuntime();
+  } else {
+    runtime = undefined;
+    elements.walletConnectionStatus.textContent =
+      "Connect a view-only TESTNET wallet to create a real shielded payment request.";
+  }
   bindEvents();
   render();
   setupEditorialMotion();
@@ -342,7 +348,15 @@ async function refreshStatus(): Promise<void> {
 }
 
 async function runGuidedCheckout(): Promise<void> {
-  if (guidedRunActive || mode !== "simulation" || runtime?.simulationWallet === undefined) return;
+  if (mode === "testnet") {
+    elements.realConfig.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "center"
+    });
+    elements.viewingKey.focus({ preventScroll: true });
+    return;
+  }
+  if (guidedRunActive || runtime?.simulationWallet === undefined) return;
   guidedRunActive = true;
   elements.guideRun.disabled = true;
   try {
@@ -484,7 +498,15 @@ function render(
   elements.lifecycleNote.textContent = session === null ? "Waiting for a session" : lifecycleNote(status);
   elements.realConfig.classList.toggle("hidden", mode !== "testnet");
   elements.simulationControls.classList.toggle("hidden", mode !== "simulation");
-  elements.guideRun.disabled = guidedRunActive || mode !== "simulation";
+  elements.guideRun.disabled = guidedRunActive;
+  if (!guidedRunActive) {
+    elements.guideRun.innerHTML = mode === "testnet"
+      ? 'Connect a real testnet wallet <span aria-hidden="true">↗</span>'
+      : 'Run the guided simulation <span aria-hidden="true">↗</span>';
+    elements.guideStatus.textContent = mode === "testnet"
+      ? "REAL TESTNET · VIEW-ONLY WALLET · NO SPENDING KEYS"
+      : "SIMULATION · ZERO FUNDS TRANSFERRED";
+  }
 
   if (session !== null) {
     elements.qrFrame.innerHTML = createPaymentQrSvg(session.paymentUri);
