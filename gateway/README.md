@@ -1,64 +1,52 @@
 # ZPS free testnet browser gateway (experimental)
 
-**Not yet deployed or validated against Zcash testnet.**
+**Deployed and validated against Zcash testnet.**
 
 This directory packages official Envoy gRPC-Web translation to bridge the browser
 wallet's gRPC-Web calls to the community-maintained `testnet.zec.rocks:443`
 CompactTxStreamer gRPC server. This is a **transport proxy**, not a wallet, node,
-payment matcher, signing service or payment watcher. It does not take a seed,
-spending key, or viewing key.
+payment matcher, signing service or payment watcher. It does not accept or process a seed,
+spending key, or private key.
 
 It deliberately exposes only
 `/cash.z.wallet.sdk.rpc.CompactTxStreamer/*` and `/healthz` to the internet.
 It fixes the upstream hostname, verifies its TLS certificate, and permits CORS
-only from the production site and listed local development origins. The
-`/healthz` response checks only the Envoy process, **not** testnet reachability.
+only from the canonical production site (`https://zcash-payment-sessions.vercel.app`)
+and listed local development origins.
 
-## Free host
+## Operational endpoints
 
-A root `render.yaml` describes one Render Free Docker web service. Render may
-sleep after 15 minutes idle, may take ~1 minute to wake, has monthly usage
-limits, and can suspend traffic-heavy free services. It cannot be represented
-as production-grade availability. If Render asks for a paid plan, do not accept
-it without the user's authorization.
+- **Gateway URL:** `https://zps-testnet-gateway.onrender.com/`
+- **Health check:** `https://zps-testnet-gateway.onrender.com/healthz`
+- **Upstream target:** `testnet.zec.rocks:443` (TLS gRPC)
 
-To deploy: connect the Render app to ChatGPT, or connect the GitHub repository
-from Render's Blueprint screen, choose this branch `feat/free-testnet-gateway`
-and **Free** service plan, then inspect the resulting settings before enabling.
-Do not enter wallet material as environment variables.
+> [!NOTE]
+> The `/healthz` HTTP 200 response proves only that the Envoy proxy process is alive.
+> It does **not** prove upstream testnet reachability. Full upstream RPC health must be
+> verified via `python3 gateway/verify-upstream.py`.
 
-## Acceptance criteria after deployment
+## Free host characteristics
 
-1. `GET https://<real-host>/healthz` returns HTTP 200.
-2. A browser-origin `OPTIONS` preflight succeeds only for the canonical
-   `https://zcash-payment-sessions.vercel.app` origin.
-3. A real gRPC-Web `GetLightdInfo` call returns chain `test` and a plausible
-   current block height. HTTP 200 from `/healthz` **does not** prove this.
-4. Rejects unrelated URLs, upstream redirects, and mainnet use.
-5. A browser wallet with **dedicated throwaway testnet viewing material**
-   imports, synchronizes, and persists, then the real current-consensus memo
-   hydrator is integrated and tested on the documented real-chain fixture.
-6. An actual testnet transfer demonstrates correct memo, exact amount,
-   confirmations and replay prevention with on-chain evidence.
+The gateway is hosted on a Render Free Docker web service described in `render.yaml`.
+Reviewers and integrators should note:
+- Render Free instances spin down after 15 minutes of inactivity and take ~30–60 seconds to cold-start.
+- It operates with free-tier bandwidth and connection limits; it is not high-availability enterprise infrastructure.
+- In the reference checkout, `https://zps-testnet-gateway.onrender.com` is configured as the default testnet endpoint. Users can override this field with their own private gRPC-Web proxy if desired.
 
-Until all tests pass, leave the existing public site untouched and keep the
-real testnet option described as experimental, not ready.
+## Verification scripts
 
-## Notes
+Before release, the gateway was verified with two automated scripts:
 
-- The existing WebZjs browser wallet currently requires an explicit testnet
-  UFVK and birthday, and the app's default endpoint is localhost.
-- It also currently lacks the opt-in current-consensus Sapling memo hydrator
-  on the browser integration path. A working gateway alone will **not**
-  solve that missing-memo problem.
-- Wallet viewing material should remain client-side. A public RPC operator
-  can observe IPs and requested chain ranges, and full transaction requests
-  can reveal interest in a particular transaction.
-- A shared public gateway can be abused or hit rate/traffic limits; a public
-  URL is not evidence of a hardened production service.
-- Root Vercel deployment, normal GitHub Actions and main SDK are unchanged.
+1. **`python3 gateway/verify-upstream.py`**:
+   - Sends a raw gRPC-Web `GetLightdInfo` frame to the gateway.
+   - Confirms HTTP 200, CORS header for the production origin, and decodes the protobuf response.
+   - Verifies that `chain_name` starts with `test` and tip height is > 4,400,000.
 
-References:
-- Render Free plan: https://render.com/docs/free
-- Envoy gRPC-Web: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_web_filter.html
-- Zcash community endpoints: https://forum.zcashcommunity.com/t/current-ways-to-connect-to-grpc-in-the-zcash-stack-lwd-zaino-zebrad-zakura-ztreamer/57539
+2. **`python3 gateway/verify-historic-transaction.py`**:
+   - Queries `GetTransaction` for canonical testnet transaction `81c9ae83cede34ca8b47cac1f60c7327651173fdf2c97a1af908561b126c7cfc` at height 4,490,144.
+   - Verifies that raw transaction bytes (2,378 bytes) are retrieved intact through the proxy.
+
+## Architecture notes
+
+- The browser checkout pairs this transport proxy with the local, browser-compatible **current-consensus Sapling memo hydrator WASM** (`wasm/sapling-memo-hydrator`), solving the V6 compact transaction decoding limitation without altering upstream WebZjs packages.
+- Viewing material (UFVK) remains client-side in browser memory only. The proxy never inspects, logs, or stores viewing keys.

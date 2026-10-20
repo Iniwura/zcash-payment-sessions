@@ -72,12 +72,40 @@ const elements = {
   detailMode: required<HTMLElement>("detail-mode")
 };
 
+const realTestnetMode = getRealTestnetModeAvailability(window.crossOriginIsolated);
+const MODE_STORAGE_KEY = "checkout:active-mode";
+
+function getInitialMode(): DemoMode {
+  try {
+    const saved =
+      window.sessionStorage.getItem(MODE_STORAGE_KEY) ??
+      window.localStorage.getItem(MODE_STORAGE_KEY);
+    if (saved === "simulation" || saved === "testnet") {
+      if (saved === "testnet" && !realTestnetMode.realTestnetEnabled) {
+        return "simulation";
+      }
+      return saved as DemoMode;
+    }
+  } catch {
+    // Ignore storage access errors in restricted iframe contexts.
+  }
+  return window.crossOriginIsolated ? "testnet" : "simulation";
+}
+
+function saveActiveMode(nextMode: DemoMode): void {
+  try {
+    window.sessionStorage.setItem(MODE_STORAGE_KEY, nextMode);
+    window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
+  } catch {
+    // Ignore storage access errors in restricted iframe contexts.
+  }
+}
+
 let runtime: Runtime | undefined;
-let mode: DemoMode = window.crossOriginIsolated ? "testnet" : "simulation";
+let mode: DemoMode = getInitialMode();
 let guidedRunActive = false;
 let openingTestnetWallet = false;
 let walletConnectionEpoch = 0;
-const realTestnetMode = getRealTestnetModeAvailability(window.crossOriginIsolated);
 
 const sessionStorage: KeyValueStorage = {
   getItem: (key) => window.localStorage.getItem(`checkout:${key}`),
@@ -243,7 +271,9 @@ async function selectMode(nextMode: DemoMode): Promise<void> {
   walletConnectionEpoch += 1;
   openingTestnetWallet = false;
   clearError();
+  saveActiveMode(nextMode);
   if (nextMode === "simulation") {
+    elements.guideRun.disabled = true;
     runtime?.browserWallet?.close();
     runtime = await createSimulationRuntime();
     mode = "simulation";
@@ -439,6 +469,8 @@ function resetDemo(): void {
   runtime = undefined;
   sessionStorage.removeItem("zcash-checkout-demo:active-session");
   mode = "simulation";
+  saveActiveMode("simulation");
+  elements.guideRun.disabled = true;
   void createSimulationRuntime().then((next) => {
     runtime = next;
     clearError();
@@ -498,7 +530,11 @@ function render(
   elements.lifecycleNote.textContent = session === null ? "Waiting for a session" : lifecycleNote(status);
   elements.realConfig.classList.toggle("hidden", mode !== "testnet");
   elements.simulationControls.classList.toggle("hidden", mode !== "simulation");
-  elements.guideRun.disabled = guidedRunActive;
+  const guideRunDisabled =
+    guidedRunActive ||
+    openingTestnetWallet ||
+    (mode === "simulation" && (runtime === undefined || runtime.mode !== "simulation"));
+  elements.guideRun.disabled = guideRunDisabled;
   if (!guidedRunActive) {
     elements.guideRun.innerHTML = mode === "testnet"
       ? 'Connect a real testnet wallet <span aria-hidden="true">↗</span>'
