@@ -59,7 +59,11 @@ export default defineConfig({
     outDir: fileURLToPath(new URL("../../dist-demo", import.meta.url)),
     emptyOutDir: true,
     rollupOptions: {
-      external: ["@chainsafe/webzjs-wallet"]
+      external: ["@chainsafe/webzjs-wallet"],
+      input: {
+        main: fileURLToPath(new URL("index.html", import.meta.url)),
+        checkout: fileURLToPath(new URL("checkout.html", import.meta.url))
+      }
     }
   }
 });

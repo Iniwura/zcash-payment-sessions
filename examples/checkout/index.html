@@ -35,7 +35,10 @@
           <div class="hero-aside">
             <span class="tiny-index mono">ZEC / ZIP-321</span>
             <p>Payment requests are easy to create. Knowing the <i>right</i> payment arrived is harder.</p>
-            <a class="text-link" href="#checkout">Run a payment session <span aria-hidden="true">↗</span></a>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <a class="text-link" href="./checkout.html">Open standalone checkout <span aria-hidden="true">↗</span></a>
+              <button id="hero-start-tour" class="button button-primary" type="button" style="padding:10px 14px;font-size:11px;">Take 60-second tour ⚡</button>
+            </div>
           </div>
         </div>
         <div class="hero-art" aria-label="Illustration of a Zcash payment request becoming a confirmed receipt">
@@ -59,7 +62,65 @@
         <div class="hero-bottom mono"><span>ONE PAYMENT. ONE SESSION. ONE RECEIPT.</span><span>SCROLL TO EXPLORE ↓</span></div>
       </section>
 
-      <section class="workbench section-wrap" id="checkout" aria-labelledby="checkout-title">
+            <section class="storefront section-wrap" id="storefront" aria-labelledby="storefront-title">
+        <div class="section-rail mono"><span>01 / STOREFRONT SIMULATOR</span><span>TRY A REAL-WORLD PURCHASE</span></div>
+        <div class="storefront-header">
+          <div>
+            <h2 id="storefront-title">Select an item.<br /><em>Experience shielded checkout.</em></h2>
+          </div>
+          <div>
+            <p style="max-width:340px;font-size:16px;line-height:1.5;color:#55534c;margin:0;">
+              Pick a merchant product to trigger an exact-correlation session. Each item binds a dedicated satoshi amount and order memo.
+            </p>
+          </div>
+        </div>
+
+        <div class="storefront-grid">
+          <div class="storefront-card">
+            <div class="storefront-top mono"><span>PRODUCT / 001</span><span>INSTANT DELIVERY</span></div>
+            <div>
+              <h3>☕ Cypherpunk Roast (12oz)</h3>
+              <p>Single-origin whole bean coffee roasted for privacy maximalists. Ships domestically with zero customer telemetry.</p>
+            </div>
+            <div class="storefront-bottom">
+              <div class="storefront-price mono">0.00010000 <span>ZEC (10k zat)</span></div>
+              <a href="./checkout.html?item=Cypherpunk+Roast+(12oz)&amount=0.00010000&memo=order-coffee-918" class="button button-primary storefront-btn">
+                Pay with Shielded Zcash <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="storefront-card">
+            <div class="storefront-top mono"><span>SERVICE / 002</span><span>SUBSCRIPTION</span></div>
+            <div>
+              <h3>🛡️ Shielded VPN Pass (30 Days)</h3>
+              <p>Zero-log WireGuard tunnel with cryptographic token authentication. Anonymous billing verified on Zcash testnet.</p>
+            </div>
+            <div class="storefront-bottom">
+              <div class="storefront-price mono">0.00050000 <span>ZEC (50k zat)</span></div>
+              <a href="./checkout.html?item=Shielded+VPN+Pass+(30+Days)&amount=0.00050000&memo=order-vpn-402" class="button button-primary storefront-btn">
+                Pay with Shielded Zcash <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="storefront-card">
+            <div class="storefront-top mono"><span>COMMUNITY / 003</span><span>NODE SPONSOR</span></div>
+            <div>
+              <h3>⚡ Zcash Privacy Node Grant</h3>
+              <p>Direct micro-grant funding dedicated community lightwalletd and Envoy gRPC-Web proxy testnet infrastructure.</p>
+            </div>
+            <div class="storefront-bottom">
+              <div class="storefront-price mono">0.00100000 <span>ZEC (100k zat)</span></div>
+              <a href="./checkout.html?item=Zcash+Privacy+Node+Grant&amount=0.00100000&memo=order-grant-773" class="button button-primary storefront-btn">
+                Pay with Shielded Zcash <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+<section class="workbench section-wrap" id="checkout" aria-labelledby="checkout-title">
         <div class="section-rail mono"><span>01 / INTERACTIVE REFERENCE</span><span>BUILT ON THE PUBLIC SDK</span></div>
         <div class="section-topline workbench-heading">
           <h2 id="checkout-title">Verify a real<br /><em>shielded payment.</em></h2>
@@ -75,6 +136,10 @@
           <div class="reviewer-start-action">
             <button id="guide-run" class="guide-button" type="button">Connect a real testnet wallet <span aria-hidden="true">↗</span></button>
             <span id="guide-status" class="guide-status mono" role="status" aria-live="polite">REAL TESTNET · VIEW-ONLY WALLET · NO SPENDING KEYS</span>
+            <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+              <a href="./checkout.html" class="button button-secondary" style="font-size:11px;padding:8px 12px;text-decoration:none;">Open in Dedicated Standalone Window ↗</a>
+              <button id="load-verified-proof" class="button button-secondary" type="button" style="font-size:11px;padding:8px 12px;">⚡ Replay On-Chain Proof (Block 4,490,144)</button>
+            </div>
           </div>
         </section>
         <div class="checkout-frame">
@@ -114,6 +179,7 @@
                 <div class="button-stack">
                   <button id="create-session" class="button button-primary" type="button">Create payment session <span aria-hidden="true">↗</span></button>
                   <button id="refresh-status" class="button button-secondary" type="button">Refresh payment status <span aria-hidden="true">↻</span></button>
+                  <button id="load-verified-proof-2" class="button button-secondary" type="button" style="font-size:11px;">⚡ Replay On-Chain Proof (Block 4,490,144) ↗</button>
                   <button id="reset-demo" class="button button-quiet" type="button">Start a fresh request</button>
                 </div>
                 <p id="error-message" class="error-message" role="alert"></p>
