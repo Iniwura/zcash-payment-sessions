@@ -62,19 +62,19 @@
       <section class="workbench section-wrap" id="checkout" aria-labelledby="checkout-title">
         <div class="section-rail mono"><span>01 / INTERACTIVE REFERENCE</span><span>BUILT ON THE PUBLIC SDK</span></div>
         <div class="section-topline workbench-heading">
-          <h2 id="checkout-title">Now, run<br /><em>the flow.</em></h2>
-          <div><p>Create an exact payment request, observe an output and see what the SDK decides.</p><span class="simulation-disclosure mono"><span class="disclosure-dot"></span> SIMULATION DEFAULT · NO FUNDS TRANSFERRED</span></div>
+          <h2 id="checkout-title">Verify a real<br /><em>shielded payment.</em></h2>
+          <div><p>Connect a view-only testnet wallet, create a real ZIP-321 request and verify incoming payments against Zcash. Developer simulation is optional.</p><span class="simulation-disclosure mono"><span class="disclosure-dot"></span> REAL TESTNET DEFAULT ON VERCEL · VIEW-ONLY</span></div>
         </div>
 
         <section class="reviewer-start" aria-label="Guided payment demonstration">
           <div class="reviewer-start-copy">
-            <span class="eyebrow mono">START HERE / NO WALLET OR FUNDS NEEDED</span>
-            <h3>A real request. A safe walkthrough.</h3>
-            <p>Your sample ZIP-321 payment request is already prepared by the public SDK. See how an exact simulated payment moves through detection, confirmations and a replay-safe receipt.</p>
+            <span class="eyebrow mono">START HERE / ZCASH TESTNET</span>
+            <h3>Connect. Request. Verify.</h3>
+            <p>Use your dedicated testnet view-only key to watch real shielded payments. The wallet scans locally through our verified public gateway. A spending key is never required; simulation remains available for edge-case testing.</p>
           </div>
           <div class="reviewer-start-action">
-            <button id="guide-run" class="guide-button" type="button">Run the guided checkout <span aria-hidden="true">↗</span></button>
-            <span id="guide-status" class="guide-status mono" role="status" aria-live="polite">SIMULATION · 3 STEPS · ZERO FUNDS TRANSFERRED</span>
+            <button id="guide-run" class="guide-button" type="button">Connect a real testnet wallet <span aria-hidden="true">↗</span></button>
+            <span id="guide-status" class="guide-status mono" role="status" aria-live="polite">REAL TESTNET · VIEW-ONLY WALLET · NO SPENDING KEYS</span>
           </div>
         </section>
         <div class="checkout-frame">
@@ -86,7 +86,7 @@
                 <span id="session-badge" class="status-pill">READY</span>
               </div>
               <div class="amount-block"><span id="amount-display" class="amount">—</span><span class="currency">ZEC</span></div>
-              <p id="recipient-display" class="muted recipient">Your prepared sample request will appear here.</p>
+              <p id="recipient-display" class="muted recipient">Connect a wallet to create a real testnet payment request.</p>
               <div class="qr-stage"><span class="qr-label mono">SCAN / ZIP-321</span><div id="qr-frame" class="qr-frame" aria-label="Payment QR code"><div class="qr-empty"><span class="qr-mark">↗</span><span>Your payment request<br />appears here</span></div></div><span class="qr-footer mono">AMOUNT + MEMO, EXACTLY MATCHED</span></div>
               <label class="field-label" for="uri-display">ZIP-321 REQUEST URI</label>
               <div class="uri-row"><textarea id="uri-display" readonly rows="3" spellcheck="false" aria-label="Generated ZIP-321 request URI"></textarea><button id="copy-uri" class="button button-secondary" type="button" disabled>Copy ↗</button></div>
@@ -95,16 +95,17 @@
 
             <aside class="control-column">
               <section class="controls-card" aria-labelledby="control-title">
-                <div class="card-heading compact"><div><p class="eyebrow mono">CONTROL / 002</p><h3 id="control-title">Make it exact.</h3></div><span id="mode-badge" class="mode-badge">Demo simulation</span></div>
+                <div class="card-heading compact"><div><p class="eyebrow mono">CONTROL / 002</p><h3 id="control-title">Make it exact.</h3></div><span id="mode-badge" class="mode-badge">Real testnet</span></div>
                 <p class="form-intro">A request is a contract with your checkout. Set its amount and correlation memo before creating the session.</p>
-                <div class="mode-switch" role="group" aria-label="Demo mode"><button id="mode-simulation" class="mode-button active" type="button">Simulation</button><button id="mode-testnet" class="mode-button" type="button">Real testnet</button></div>
+                <div class="mode-switch" role="group" aria-label="Checkout mode"><button id="mode-testnet" class="mode-button active" type="button">Real testnet</button><button id="mode-simulation" class="mode-button" type="button">Developer simulation</button></div>
                 <p id="real-mode-notice" class="compatibility-note hidden" role="status"></p>
-                <div id="real-config" class="real-config hidden">
-                  <p class="config-note">View-only Zcash testnet observation. Requires a browser-compatible gRPC-Web endpoint; never enter spending keys.</p>
-                  <label class="field-label" for="lightwalletd-url">TESTNET GRPC-WEB ENDPOINT</label><input id="lightwalletd-url" type="url" value="http://127.0.0.1:18080" placeholder="https://your-proxy.example" autocomplete="off" />
-                  <label class="field-label" for="viewing-key">VIEW-ONLY UFVK</label><input id="viewing-key" type="password" placeholder="Optional with saved view-only account" autocomplete="off" />
+                <div id="real-config" class="real-config">
+                  <p class="config-note">Experimental real Zcash testnet observation. The verified public gRPC-Web gateway is prefilled. A testnet Unified Full Viewing Key is required to verify shielded Sapling memos; never enter spending keys. A viewing key reveals wallet activity. It is used locally in this browser, not sent to the gateway.</p>
+                  <label class="field-label" for="lightwalletd-url">TESTNET GRPC-WEB ENDPOINT</label><input id="lightwalletd-url" type="url" value="https://zps-testnet-gateway.onrender.com" placeholder="https://your-proxy.example" autocomplete="off" />
+                  <label class="field-label" for="viewing-key">VIEW-ONLY UFVK</label><input id="viewing-key" type="password" placeholder="Required each time; view-only testnet key" autocomplete="off" />
                   <label class="field-label" for="birthday-height">ACCOUNT BIRTHDAY HEIGHT</label><input id="birthday-height" type="number" min="0" placeholder="Required for new account" />
                   <button id="open-testnet" class="button button-secondary full-width" type="button">Open view-only wallet ↗</button>
+                  <p id="wallet-connection-status" class="compatibility-note" role="status" aria-live="polite">Connect a view-only testnet wallet before creating a real payment request.</p>
                 </div>
                 <label class="field-label" for="amount-input">01 / AMOUNT IN ZEC</label>
                 <div class="amount-input-row"><input id="amount-input" type="text" inputmode="decimal" value="0.00010000" /><span>ZEC</span></div>
@@ -120,7 +121,7 @@
               <details id="simulation-controls" class="simulation-card">
                 <summary class="scenario-summary"><span>EXPLORE EDGE CASES</span><strong>Manual controls <span aria-hidden="true">+</span></strong></summary>
                 <div class="card-heading compact"><div><p class="eyebrow mono">TEST SCENARIOS / 003</p><h3>Move the payment.</h3></div></div>
-                <p class="simulation-description">These scenarios exercise the actual public SDK through a simulated wallet adapter. They never broadcast a transaction.</p>
+                <p class="simulation-description">DEVELOPER SIMULATION ONLY · NO FUNDS TRANSFERRED. These scenarios exercise the actual public SDK through a simulated wallet adapter. They never broadcast a transaction.</p>
                 <div class="simulation-grid">
                   <button data-scenario="exact" class="scenario-button" type="button"><span>01</span> Exact output ↗</button>
                   <button data-scenario="confirming" class="scenario-button" type="button"><span>02</span> +1 confirmation ↗</button>

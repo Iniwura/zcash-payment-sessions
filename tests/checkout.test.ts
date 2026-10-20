@@ -7,6 +7,8 @@ import {
 } from "../examples/checkout/src/controller.js";
 import { SimulatedWallet } from "../examples/checkout/src/simulated-wallet.js";
 import { prepareReviewerSession } from "../examples/checkout/src/reviewer-session.js";
+import { DEFAULT_TESTNET_GRPC_WEB_ENDPOINT } from "../examples/checkout/src/testnet-config.js";
+import { loadTestnetPaymentHydrator } from "../examples/checkout/src/testnet-hydrator.js";
 import {
   REAL_TESTNET_MODE_NOTICE,
   getRealTestnetModeAvailability
@@ -100,6 +102,61 @@ async function createController(options: {
 }
 
 describe("checkout demo public-SDK integration", () => {
+  it("uses the verified public testnet gateway by default", () => {
+    expect(DEFAULT_TESTNET_GRPC_WEB_ENDPOINT).toBe("https://zps-testnet-gateway.onrender.com");
+  });
+
+  it("requires a view-only key before loading memo decryption", async () => {
+    await expect(loadTestnetPaymentHydrator(
+      {} as never,
+      " "
+    )).rejects.toThrow("testnet view-only UFVK");
+  });
+
+  it("wires the production memo hydrator to its wallet and rejects tampered evidence", async () => {
+    const wallet = {
+      get_transaction: async () => ({ data: new Uint8Array([6]), height: 4_490_144 })
+    };
+    const code = "1234567890abcdef".repeat(4);
+    const injected = {
+      default: async () => ({}),
+      hydrate_sapling_payment: () => ({
+        txid: code,
+        pool: "sapling",
+        output_index: 0,
+        value: 10_000n,
+        memo: "order-123"
+      })
+    };
+    const hydrate = await loadTestnetPaymentHydrator(
+      wallet as never,
+      "test-only-view-key",
+      async () => injected
+    );
+    const output = await hydrate({
+      payment_id: code + ":sapling:0",
+      txid: code,
+      value: 10_000n,
+      memo: undefined,
+      block_height: 4_490_144,
+      confirmations: 2,
+      status: 0,
+      pool: "sapling"
+    });
+    expect(output?.memo).toBe("order-123");
+    const mismatch = await hydrate({
+      payment_id: code + ":sapling:1",
+      txid: code,
+      value: 10_000n,
+      memo: undefined,
+      block_height: 4_490_144,
+      confirmations: 2,
+      status: 0,
+      pool: "sapling"
+    });
+    expect(mismatch).toBeUndefined();
+  });
+
   it("gates real testnet mode without browser isolation and keeps simulation available", () => {
     expect(getRealTestnetModeAvailability(false)).toEqual({
       realTestnetEnabled: false,

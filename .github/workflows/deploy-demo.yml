@@ -39,6 +39,9 @@ jobs:
       - name: Build pinned WebZjs packages and install dependencies
         run: npm run bootstrap:webzjs
 
+      - name: Build current-consensus Sapling memo WASM
+        run: bash scripts/build-sapling-memo-hydrator.sh
+
       - name: Verify SDK, UI contracts, types and consumer integration
         run: |
           npm run typecheck
@@ -62,7 +65,10 @@ jobs:
       # Build a second time with the root URL base required by Vercel.
       # This is a compiled, public static artifact; no wallet secrets are bundled.
       - name: Build Vercel static checkout
-        run: GITHUB_ACTIONS=false npm run demo:build
+        run: |
+          GITHUB_ACTIONS=false npm run demo:build
+          test -s dist-demo/sapling-hydrator/sapling_memo_hydrator.js
+          test -s dist-demo/sapling-hydrator/sapling_memo_hydrator_bg.wasm
 
       - name: Browser interaction acceptance
         run: |
@@ -78,6 +84,21 @@ jobs:
             sleep 1
           done
           /tmp/zps-browser-acceptance/bin/python scripts/browser-checkout-smoke.py
+
+      - name: Real testnet browser wallet acceptance
+        run: |
+          set -euo pipefail
+          KEY_DIR="$(mktemp -d)"
+          export ZPS_TEST_KEY_PATH="$KEY_DIR/view-only-testnet-key.txt"
+          node scripts/ci-create-testnet-viewing-key.mjs
+          GITHUB_ACTIONS=false npm run demo:preview -- --host 127.0.0.1 --port 5173 > /tmp/zps-live-acceptance.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true; rm -rf "$KEY_DIR"' EXIT
+          for i in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:5173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          /tmp/zps-browser-acceptance/bin/python scripts/browser-live-testnet-smoke.py
 
       - name: Browser smoke and responsive screenshots
         # Screenshot tooling can fail on hosted runners despite a valid built application.

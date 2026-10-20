@@ -7,6 +7,7 @@ import {
 } from "zcash-payment-sessions";
 import { CheckoutDemoController } from "./controller.js";
 import { prepareReviewerSession } from "./reviewer-session.js";
+import { loadTestnetPaymentHydrator } from "./testnet-hydrator.js";
 import { createPaymentQrSvg } from "./qr.js";
 import { describeSessionException } from "./ui-state.js";
 import { SimulatedWallet } from "./simulated-wallet.js";
@@ -47,6 +48,7 @@ const elements = {
   guideStatus: required<HTMLElement>("guide-status"),
   realModeNotice: required<HTMLElement>("real-mode-notice"),
   realConfig: required<HTMLElement>("real-config"),
+  walletConnectionStatus: required<HTMLElement>("wallet-connection-status"),
   simulationControls: required<HTMLElement>("simulation-controls"),
   amountInput: required<HTMLInputElement>("amount-input"),
   memoInput: required<HTMLInputElement>("memo-input"),
@@ -70,10 +72,40 @@ const elements = {
   detailMode: required<HTMLElement>("detail-mode")
 };
 
-let runtime: Runtime | undefined;
-let mode: DemoMode = "simulation";
-let guidedRunActive = false;
 const realTestnetMode = getRealTestnetModeAvailability(window.crossOriginIsolated);
+const MODE_STORAGE_KEY = "checkout:active-mode";
+
+function getInitialMode(): DemoMode {
+  try {
+    const saved =
+      window.sessionStorage.getItem(MODE_STORAGE_KEY) ??
+      window.localStorage.getItem(MODE_STORAGE_KEY);
+    if (saved === "simulation" || saved === "testnet") {
+      if (saved === "testnet" && !realTestnetMode.realTestnetEnabled) {
+        return "simulation";
+      }
+      return saved as DemoMode;
+    }
+  } catch {
+    // Ignore storage access errors in restricted iframe contexts.
+  }
+  return window.crossOriginIsolated ? "testnet" : "simulation";
+}
+
+function saveActiveMode(nextMode: DemoMode): void {
+  try {
+    window.sessionStorage.setItem(MODE_STORAGE_KEY, nextMode);
+    window.localStorage.setItem(MODE_STORAGE_KEY, nextMode);
+  } catch {
+    // Ignore storage access errors in restricted iframe contexts.
+  }
+}
+
+let runtime: Runtime | undefined;
+let mode: DemoMode = getInitialMode();
+let guidedRunActive = false;
+let openingTestnetWallet = false;
+let walletConnectionEpoch = 0;
 
 const sessionStorage: KeyValueStorage = {
   getItem: (key) => window.localStorage.getItem(`checkout:${key}`),
@@ -138,21 +170,23 @@ async function openTestnetRuntime(): Promise<Runtime> {
     throw new Error("Enter a verified browser-compatible testnet gRPC-web endpoint first");
   }
 
-  const browserWallet = await WebZjsBrowserWallet.open({
-    network: "test",
-    lightwalletdUrl,
-    storage: walletStorage,
-    storageKey: "testnet:db"
-  });
+  // Viewing material is handled only in memory for the active checkout.
+  // Do not send it to the gateway or persist it as application state.
+  const viewingKey = elements.viewingKey.value.trim();
+  if (viewingKey.length === 0) {
+    throw new Error("Enter your testnet view-only UFVK to verify shielded memos. Re-enter it whenever you reopen the wallet; never use a spending key.");
+  }
 
+  let browserWallet: WebZjsBrowserWallet | undefined;
   try {
+    browserWallet = await WebZjsBrowserWallet.open({
+      network: "test",
+      lightwalletdUrl,
+      storage: walletStorage,
+      storageKey: "testnet:db"
+    });
     let accountId = browserWallet.getAccountId();
     if (accountId === undefined) {
-      const viewingKey = elements.viewingKey.value;
-      if (viewingKey.trim().length === 0) {
-        throw new Error("Enter a testnet UFVK once to create the view-only account");
-      }
-
       const birthdayHeight = parseTestnetBirthday(
         elements.birthdayHeight.value
       );
@@ -161,15 +195,21 @@ async function openTestnetRuntime(): Promise<Runtime> {
         ufvk: viewingKey,
         birthdayHeight
       });
-      elements.viewingKey.value = "";
     }
 
+    // Current-consensus Sapling transaction parsing and trial decryption happen
+    // in the browser's isolated WASM module. Missing evidence fails closed.
+    const paymentHydrator = await loadTestnetPaymentHydrator(
+      browserWallet,
+      viewingKey
+    );
     const recipientAddress = await browserWallet.getCurrentAddress();
     const sdk = await ZcashPaymentSessions.create({
       storage: testnetSessionStorage,
       recipientAddress,
       wallet: browserWallet,
       accountId,
+      paymentHydrator,
       requiredConfirmations: 2
     });
     const controller = new CheckoutDemoController(sdk, testnetSessionStorage);
@@ -185,13 +225,22 @@ async function openTestnetRuntime(): Promise<Runtime> {
       recipientAddress
     };
   } catch (error) {
-    browserWallet.close();
+    browserWallet?.close();
     throw error;
+  } finally {
+    // Clear the input even when WebZjs initialization fails before wallet creation.
+    elements.viewingKey.value = "";
   }
 }
 
 async function initialize(): Promise<void> {
-  runtime = await createSimulationRuntime();
+  if (mode === "simulation") {
+    runtime = await createSimulationRuntime();
+  } else {
+    runtime = undefined;
+    elements.walletConnectionStatus.textContent =
+      "Connect a view-only TESTNET wallet to create a real shielded payment request.";
+  }
   bindEvents();
   render();
   setupEditorialMotion();
@@ -219,11 +268,16 @@ function bindEvents(): void {
 }
 
 async function selectMode(nextMode: DemoMode): Promise<void> {
+  walletConnectionEpoch += 1;
+  openingTestnetWallet = false;
   clearError();
+  saveActiveMode(nextMode);
   if (nextMode === "simulation") {
+    elements.guideRun.disabled = true;
     runtime?.browserWallet?.close();
     runtime = await createSimulationRuntime();
     mode = "simulation";
+    elements.walletConnectionStatus.textContent = "";
     render();
     return;
   }
@@ -236,25 +290,45 @@ async function selectMode(nextMode: DemoMode): Promise<void> {
   runtime?.browserWallet?.close();
   runtime = undefined;
   mode = "testnet";
+  elements.walletConnectionStatus.textContent = "Connect a view-only testnet wallet before creating a real payment request.";
   render(null, undefined);
 }
 
 async function openTestnetWallet(): Promise<void> {
+  if (openingTestnetWallet) return;
   clearError();
   if (!realTestnetMode.realTestnetEnabled) {
     render();
     return;
   }
 
+  const epoch = ++walletConnectionEpoch;
+  openingTestnetWallet = true;
+  elements.openTestnet.disabled = true;
+  elements.openTestnet.textContent = "Opening wallet…";
+  elements.walletConnectionStatus.textContent = "Opening the WebZjs view-only wallet and local memo verifier. This may take a moment.";
+  render();
   try {
-    elements.openTestnet.disabled = true;
-    runtime = await openTestnetRuntime();
-    mode = "testnet";
+    const next = await openTestnetRuntime();
+    if (epoch !== walletConnectionEpoch || mode !== "testnet") {
+      next.browserWallet?.close();
+      return;
+    }
+    runtime = next;
+    elements.walletConnectionStatus.textContent = "View-only testnet wallet ready. Create a real request, then refresh to scan the chain.";
     render();
   } catch (error) {
-    showError(error);
+    if (epoch === walletConnectionEpoch) {
+      elements.walletConnectionStatus.textContent = "Could not open the view-only wallet. Check the error and try again.";
+      showError(error);
+    }
   } finally {
-    elements.openTestnet.disabled = false;
+    if (epoch === walletConnectionEpoch) {
+      openingTestnetWallet = false;
+      elements.openTestnet.disabled = false;
+      elements.openTestnet.textContent = "Open view-only wallet ↗";
+      render();
+    }
   }
 }
 
@@ -304,7 +378,15 @@ async function refreshStatus(): Promise<void> {
 }
 
 async function runGuidedCheckout(): Promise<void> {
-  if (guidedRunActive || mode !== "simulation" || runtime?.simulationWallet === undefined) return;
+  if (mode === "testnet") {
+    elements.realConfig.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "center"
+    });
+    elements.viewingKey.focus({ preventScroll: true });
+    return;
+  }
+  if (guidedRunActive || runtime?.simulationWallet === undefined) return;
   guidedRunActive = true;
   elements.guideRun.disabled = true;
   try {
@@ -387,6 +469,8 @@ function resetDemo(): void {
   runtime = undefined;
   sessionStorage.removeItem("zcash-checkout-demo:active-session");
   mode = "simulation";
+  saveActiveMode("simulation");
+  elements.guideRun.disabled = true;
   void createSimulationRuntime().then((next) => {
     runtime = next;
     clearError();
@@ -430,6 +514,8 @@ function render(
     ? "Create a session to derive the payment request."
     : `Recipient · ${runtime?.recipientAddress ?? "configured wallet address"}`;
   elements.uriDisplay.value = session?.paymentUri ?? "";
+  elements.createSession.disabled = openingTestnetWallet || runtime === undefined || runtime.mode !== mode;
+  elements.refreshStatus.disabled = openingTestnetWallet || runtime === undefined || runtime.mode !== mode;
   elements.copyUri.disabled = session === null;
   elements.createSession.innerHTML = session === null
     ? 'Create payment session <span aria-hidden="true">↗</span>'
@@ -444,7 +530,19 @@ function render(
   elements.lifecycleNote.textContent = session === null ? "Waiting for a session" : lifecycleNote(status);
   elements.realConfig.classList.toggle("hidden", mode !== "testnet");
   elements.simulationControls.classList.toggle("hidden", mode !== "simulation");
-  elements.guideRun.disabled = guidedRunActive || mode !== "simulation";
+  const guideRunDisabled =
+    guidedRunActive ||
+    openingTestnetWallet ||
+    (mode === "simulation" && (runtime === undefined || runtime.mode !== "simulation"));
+  elements.guideRun.disabled = guideRunDisabled;
+  if (!guidedRunActive) {
+    elements.guideRun.innerHTML = mode === "testnet"
+      ? 'Connect a real testnet wallet <span aria-hidden="true">↗</span>'
+      : 'Run the guided simulation <span aria-hidden="true">↗</span>';
+    elements.guideStatus.textContent = mode === "testnet"
+      ? "REAL TESTNET · VIEW-ONLY WALLET · NO SPENDING KEYS"
+      : "SIMULATION · ZERO FUNDS TRANSFERRED";
+  }
 
   if (session !== null) {
     elements.qrFrame.innerHTML = createPaymentQrSvg(session.paymentUri);

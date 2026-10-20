@@ -1,0 +1,33 @@
+name: Validate free testnet gateway
+
+on:
+  push:
+    branches:
+      - feat/free-testnet-gateway
+    paths:
+      - gateway/**
+      - render.yaml
+      - .github/workflows/validate-free-gateway.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Envoy configuration against pinned image
+        run: |
+          docker pull envoyproxy/envoy:v1.36.11
+          docker run --rm -v "$PWD/gateway/envoy.yaml:/etc/envoy/envoy.yaml:ro" \
+            envoyproxy/envoy:v1.36.11 -c /etc/envoy/envoy.yaml --mode validate
+      - name: Verify live Render gateway reaches Zcash testnet
+        run: python3 gateway/verify-upstream.py
+      - name: Retrieve historical shielded transaction bytes
+        run: python3 gateway/verify-historic-transaction.py
+      - name: Check gateway has no wallet secrets
+        run: |
+          ! grep -R -i -E '(^|[[:space:]])(seed[[:space:]]*=|private_key[[:space:]]*=|ufvk[[:space:]]*=)' gateway
