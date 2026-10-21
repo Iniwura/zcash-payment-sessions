@@ -331,6 +331,34 @@ function bindEvents(): void {
   document.getElementById("hero-start-tour")?.addEventListener("click", () => {
     tour.start();
   });
+  document.getElementById("app-tour-btn")?.addEventListener("click", () => {
+    tour.start();
+  });
+
+  document.querySelectorAll<HTMLButtonElement>(".storefront-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const product = btn.dataset.product;
+      const amount = btn.dataset.amount;
+      const memo = btn.dataset.memo;
+      if (amount) elements.amountInput.value = amount;
+      if (memo) elements.memoInput.value = memo;
+      const orderItem = document.getElementById("order-item-name");
+      if (orderItem && product) orderItem.textContent = product;
+      const orderMemo = document.getElementById("order-memo-badge");
+      if (orderMemo && memo) orderMemo.textContent = memo;
+      const orderAmt = document.getElementById("order-amount-badge");
+      if (orderAmt && amount) orderAmt.textContent = `${amount} ZEC`;
+
+      document.getElementById("checkout")?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "start"
+      });
+
+      if (mode === "simulation") {
+        void createSession();
+      }
+    });
+  });
 }
 
 async function selectMode(nextMode: DemoMode): Promise<void> {

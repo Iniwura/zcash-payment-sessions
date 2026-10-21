@@ -10,26 +10,82 @@
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <meta name="description" content="An exact, persistent lifecycle for shielded Zcash payments. ZIP-321 requests, confirmations, replay protection, and a verified testnet proof." />
   <title>Zcash Payment Sessions / ZPS — A request isn't a receipt.</title>
-    <title>ZPS / Dedicated Reference Checkout</title>
+    <title>ZPS / Reference Checkout Application</title>
   </head>
   <body>
+    <a class="skip-link" href="#content">Skip to content</a>
     <header class="checkout-standalone-header mono">
       <a class="back-link" href="./">
-        <span aria-hidden="true">←</span> BACK TO STORE / PRODUCT HUB
+        <span aria-hidden="true">←</span> BACK TO OVERVIEW
       </a>
       <div class="brand">
         <span class="brand-symbol" aria-hidden="true"><span></span><span></span><span></span></span>
-        ZPS <span class="registered">CHECKOUT</span>
+        ZPS <span class="registered">TERMINAL</span>
       </div>
-      <div class="network-badge mono">
-        <span class="disclosure-dot"></span> ZCASH TESTNET / ENVOY GATEWAY
+      <div style="display:flex;align-items:center;gap:16px;">
+        <button id="app-tour-btn" class="button button-primary" style="padding:8px 14px;font-size:11px;" type="button">App tour ⚡</button>
+        <div class="network-badge mono">
+          <span class="disclosure-dot"></span> TESTNET GATEWAY ONLINE
+        </div>
       </div>
     </header>
 
-    <main class="checkout-standalone-wrap">
+    <main id="content" class="checkout-standalone-wrap">
+      <!-- STOREFRONT SIMULATOR CONSOLE -->
+      <section class="storefront" id="app-storefront" style="padding-top:10px;padding-bottom:36px;border-top:0;" aria-labelledby="storefront-title">
+        <div class="section-rail mono" style="margin-bottom:20px;">
+          <span>01 / STOREFRONT SIMULATOR</span>
+          <span>SELECT A PRODUCT OR CONFIGURE CUSTOM ORDER</span>
+        </div>
+        <div class="storefront-grid">
+          <div class="storefront-card">
+            <div class="storefront-top mono"><span>PRODUCT / 001</span><span>INSTANT DELIVERY</span></div>
+            <div>
+              <h3>☕ Cypherpunk Roast (12oz)</h3>
+              <p>Single-origin whole bean coffee roasted for privacy maximalists. Ships domestically with zero customer telemetry.</p>
+            </div>
+            <div class="storefront-bottom">
+              <div class="storefront-price mono">0.00010000 <span>ZEC (10k zat)</span></div>
+              <button type="button" class="button button-primary storefront-btn" data-product="Cypherpunk Roast (12oz)" data-amount="0.00010000" data-memo="order-coffee-918">
+                Select Product ↓
+              </button>
+            </div>
+          </div>
+
+          <div class="storefront-card">
+            <div class="storefront-top mono"><span>SERVICE / 002</span><span>SUBSCRIPTION</span></div>
+            <div>
+              <h3>🛡️ Shielded VPN Pass (30 Days)</h3>
+              <p>Zero-log WireGuard tunnel with cryptographic token authentication. Anonymous billing verified on Zcash testnet.</p>
+            </div>
+            <div class="storefront-bottom">
+              <div class="storefront-price mono">0.00050000 <span>ZEC (50k zat)</span></div>
+              <button type="button" class="button button-primary storefront-btn" data-product="Shielded VPN Pass (30 Days)" data-amount="0.00050000" data-memo="order-vpn-402">
+                Select Product ↓
+              </button>
+            </div>
+          </div>
+
+          <div class="storefront-card">
+            <div class="storefront-top mono"><span>COMMUNITY / 003</span><span>NODE SPONSOR</span></div>
+            <div>
+              <h3>⚡ Zcash Privacy Node Grant</h3>
+              <p>Direct micro-grant funding dedicated community lightwalletd and Envoy gRPC-Web proxy testnet infrastructure.</p>
+            </div>
+            <div class="storefront-bottom">
+              <div class="storefront-price mono">0.00100000 <span>ZEC (100k zat)</span></div>
+              <button type="button" class="button button-primary storefront-btn" data-product="Zcash Privacy Node Grant" data-amount="0.00100000" data-memo="order-grant-773">
+                Select Product ↓
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ACTIVE ORDER SUMMARY -->
       <section class="order-summary-box" aria-label="Order Summary">
         <div>
-          <span class="eyebrow mono" style="display:block;margin-bottom:4px;font-size:10px;color:#67645c;">STOREFRONT CHECKOUT / SESSION</span>
+          <span class="eyebrow mono" style="display:block;margin-bottom:4px;font-size:10px;color:#67645c;">ACTIVE PAYMENT SESSION</span>
           <div id="order-item-name" class="order-summary-item">Cypherpunk Roast (12oz)</div>
           <div class="order-summary-memo mono">MEMO: <span id="order-memo-badge">order-coffee-918</span></div>
         </div>
@@ -39,7 +95,22 @@
         </div>
       </section>
 
-              <div class="checkout-frame">
+      <!-- CHECKOUT FRAMEWORK -->
+            <!-- REVIEWER GUIDED WALKTHROUGH -->
+      <section class="reviewer-start" aria-label="Guided payment demonstration" style="margin-bottom:24px;">
+        <div class="reviewer-start-copy">
+          <span class="eyebrow mono">02 / INTERACTIVE WALKTHROUGH</span>
+          <h3>Connect. Request. Verify.</h3>
+          <p>Experience the state machine in motion: derive a ZIP-321 request, detect exact payment output, accumulate confirmations, and settle to a replay-safe receipt.</p>
+        </div>
+        <div class="reviewer-start-action">
+          <button id="guide-run" class="guide-button" type="button">Walk through a complete payment <span aria-hidden="true">↗</span></button>
+          <span id="guide-status" class="guide-status mono" role="status" aria-live="polite">1-CLICK REVIEWER WALKTHROUGH · NO WALLET REQUIRED</span>
+        </div>
+      </section>
+
+      <div id="checkout">
+                <div class="checkout-frame">
           <div class="checkout-frame-top mono"><div><span class="frame-dots" aria-hidden="true">● ● ●</span> ZPS / REFERENCE CHECKOUT</div><span>SHIELDED PAYMENTS, RESOLVED</span></div>
           <div class="checkout-grid">
             <section class="checkout-card" aria-labelledby="request-title">
@@ -76,7 +147,7 @@
                 <div class="button-stack">
                   <button id="create-session" class="button button-primary" type="button">Create payment session <span aria-hidden="true">↗</span></button>
                   <button id="refresh-status" class="button button-secondary" type="button">Refresh payment status <span aria-hidden="true">↻</span></button>
-                  <button id="load-verified-proof" class="button button-secondary" type="button" style="font-size:11px;">⚡ Replay On-Chain Proof (Block 4,490,144) ↗</button>
+                  <button id="load-verified-proof-2" class="button button-secondary" type="button" style="font-size:11px;">⚡ Replay On-Chain Proof (Block 4,490,144) ↗</button>
                   <button id="reset-demo" class="button button-quiet" type="button">Start a fresh request</button>
                 </div>
                 <p id="error-message" class="error-message" role="alert"></p>
@@ -126,12 +197,13 @@
           <div class="checkout-disclaimer mono"><span>THIS IS A REFERENCE IMPLEMENTATION</span><span>LIVE HISTORICAL PROOF AVAILABLE BELOW ↓</span></div>
         </div>
 
+      </div>
     </main>
 
     <footer class="site-footer">
       <div class="footer-top mono">
         <span>© ZPS / 2026</span>
-        <span>DEDICATED REFERENCE CHECKOUT</span>
+        <span>REFERENCE CHECKOUT APPLICATION</span>
         <a href="./">RETURN TO HOME ↑</a>
       </div>
     </footer>

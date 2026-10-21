@@ -11,7 +11,7 @@ from pathlib import Path
 
 from playwright.sync_api import expect, sync_playwright
 
-BASE = "http://127.0.0.1:4173/"
+BASE = "http://127.0.0.1:4173/checkout.html"
 OUT = Path("visual-audit")
 OUT.mkdir(exist_ok=True)
 BROWSER_BIN = shutil.which("google-chrome") or shutil.which("chromium") or shutil.which("chromium-browser")

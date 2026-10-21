@@ -9,32 +9,32 @@ export interface TourStep {
 export const TOUR_STEPS: TourStep[] = [
   {
     stepNumber: "01 / 04",
-    title: "THE ZIP-321 REQUEST",
-    targetId: "qr-frame",
+    title: "SELECT A STOREFRONT ITEM",
+    targetId: "app-storefront",
     description:
-      "A standard ZIP-321 URI is stateless—it asks for money but cannot prove receipt. ZPS generates a cryptographically bound session with exact zatoshis and correlation memo.",
-    highlightText: "EXACT AMOUNT + UNIQUE MEMO"
+      "Choose a pre-configured merchant product (Coffee, VPN, Node Grant) to test an exact-correlation payment session with a unique satoshi value and memo.",
+    highlightText: "INSTANT E-COMMERCE CONTEXT"
   },
   {
     stepNumber: "02 / 04",
-    title: "REPLAY-SAFE STATE MACHINE",
-    targetId: "timeline",
+    title: "THE ZIP-321 PAYMENT REQUEST",
+    targetId: "qr-frame",
     description:
-      "The payment progresses through verified states: Awaiting Payment → Detected → Confirming → Paid. Reorgs and timeouts are handled deterministically.",
-    highlightText: "DETERMINISTIC LIFECYCLE"
+      "ZPS generates a standards-compliant ZIP-321 URI and scannable QR code. The request is bound to the exact order memo and amount.",
+    highlightText: "STANDARDS-COMPLIANT URI"
   },
   {
     stepNumber: "03 / 04",
-    title: "CONSUMED-PAYMENT LEDGER",
-    targetId: "detail-session",
+    title: "STATE MACHINE & REPLAY LEDGER",
+    targetId: "timeline",
     description:
-      "Rather than keying on transaction hashes alone, ZPS indexes by exact output (txid:pool:output_index). Once consumed, outputs cannot be replayed for another order.",
+      "The payment progresses through verified states: Awaiting Payment → Detected → Confirming → Paid. Reorgs and timeouts are handled deterministically.",
     highlightText: "NO DOUBLE CREDIT GUARANTEE"
   },
   {
     stepNumber: "04 / 04",
-    title: "BROWSER WASM & ENVOY GATEWAY",
-    targetId: "real-config",
+    title: "BROWSER WASM & LIVE GATEWAY",
+    targetId: "controls-panel",
     description:
       "Client-side Rust WebAssembly trial-decrypts private Sapling memos in your browser without spending keys, streaming live testnet blocks via our public Render Envoy gateway.",
     highlightText: "VIEW-ONLY PRIVACY PRESERVING"

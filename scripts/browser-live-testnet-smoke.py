@@ -101,7 +101,7 @@ def main() -> None:
         errors = []
         page.on("pageerror", lambda exc: errors.append(type(exc).__name__))
         try:
-            page.goto(ORIGIN, wait_until="domcontentloaded", timeout=45000)
+            page.goto(f"{ORIGIN}/checkout.html", wait_until="domcontentloaded", timeout=45000)
             assert page.evaluate("crossOriginIsolated"), "WebZjs thread isolation unavailable"
             if page.locator("#mode-badge").inner_text() != "Real testnet":
                 page.locator("#mode-testnet").click()
