@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f0eee7" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Zcash Payment Sessions / ZPS — A request isn't a receipt." />
+  <meta property="og:description" content="Exact, persistent payment sessions for shielded Zcash transactions. Built on ZIP-321 and WebZjs." />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <meta name="description" content="An exact, persistent lifecycle for shielded Zcash payments. ZIP-321 requests, confirmations, replay protection, and a verified testnet proof." />
+  <title>Zcash Payment Sessions / ZPS — A request isn't a receipt.</title>
+    <title>ZPS / Reference Checkout Application</title>
+    <script type="importmap">
+      {"imports":{"@chainsafe/webzjs-wallet":"./webzjs-wallet/webzjs_wallet.js"}}
+    </script>
+    <script type="module" crossorigin src="/assets/checkout-D0JLhkDZ.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/style-BhdlKC_C.js">
+    <link rel="stylesheet" crossorigin href="/assets/style-DwN-DwJQ.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="checkout-standalone-header mono">
+      <a class="back-link" href="./">
+        <span aria-hidden="true">←</span> BACK TO OVERVIEW
+      </a>
+      <div class="brand">
+        <span class="brand-symbol" aria-hidden="true"><span></span><span></span><span></span></span>
+        ZPS <span class="registered">TERMINAL</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <button id="app-tour-btn" class="button button-primary" style="padding:8px 14px;font-size:11px;" type="button">App tour ⚡</button>
+        <div class="network-badge mono">
+          <span class="disclosure-dot"></span> TESTNET GATEWAY ONLINE
+        </div>
+      </div>
+    </header>
+
+    <main id="content" class="checkout-standalone-wrap">
+      <!-- STOREFRONT SIMULATOR CONSOLE -->
+      <section class="storefront" id="app-storefront" style="padding-top:10px;padding-bottom:36px;border-top:0;" aria-labelledby="storefront-title">
+        <div class="section-rail mono" style="margin-bottom:20px;">
+          <span>01 / STOREFRONT SIMULATOR</span>
+          <span>SELECT A PRODUCT OR CONFIGURE CUSTOM ORDER</span>
+        </div>
+        <div class="storefront-grid">
+          <div class="storefront-card">
+            <div class="storefront-top mono"><span>PRODUCT / 001</span><span>INSTANT DELIVERY</span></div>
+            <div>
+              <h3>☕ Cypherpunk Roast (12oz)</h3>
+              <p>Single-origin whole bean coffee roasted for privacy maximalists. Ships domestically with zero customer telemetry.</p>
+            </div>
+            <div class="storefront-bottom">
+              <div class="storefront-price mono">0.00010000 <span>ZEC (10k zat)</span></div>
+              <button type="button" class="button button-primary storefront-btn" data-product="Cypherpunk Roast (12oz)" data-amount="0.00010000" data-memo="order-coffee-918">
+                Select Product ↓
+              </button>
+            </div>
+          </div>
+
+          <div class="storefront-card">
+            <div class="storefront-top mono"><span>SERVICE / 002</span><span>SUBSCRIPTION</span></div>
+            <div>
+              <h3>🛡️ Shielded VPN Pass (30 Days)</h3>
+              <p>Zero-log WireGuard tunnel with cryptographic token authentication. Anonymous billing verified on Zcash testnet.</p>
+            </div>
+            <div class="storefront-bottom">
+              <div class="storefront-price mono">0.00050000 <span>ZEC (50k zat)</span></div>
+              <button type="button" class="button button-primary storefront-btn" data-product="Shielded VPN Pass (30 Days)" data-amount="0.00050000" data-memo="order-vpn-402">
+                Select Product ↓
+              </button>
+            </div>
+          </div>
+
+          <div class="storefront-card">
+            <div class="storefront-top mono"><span>COMMUNITY / 003</span><span>NODE SPONSOR</span></div>
+            <div>
+              <h3>⚡ Zcash Privacy Node Grant</h3>
+              <p>Direct micro-grant funding dedicated community lightwalletd and Envoy gRPC-Web proxy testnet infrastructure.</p>
+            </div>
+            <div class="storefront-bottom">
+              <div class="storefront-price mono">0.00100000 <span>ZEC (100k zat)</span></div>
+              <button type="button" class="button button-primary storefront-btn" data-product="Zcash Privacy Node Grant" data-amount="0.00100000" data-memo="order-grant-773">
+                Select Product ↓
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ACTIVE ORDER SUMMARY -->
+      <section class="order-summary-box" aria-label="Order Summary">
+        <div>
+          <span class="eyebrow mono" style="display:block;margin-bottom:4px;font-size:10px;color:#67645c;">ACTIVE PAYMENT SESSION</span>
+          <div id="order-item-name" class="order-summary-item">Cypherpunk Roast (12oz)</div>
+          <div class="order-summary-memo mono">MEMO: <span id="order-memo-badge">order-coffee-918</span></div>
+        </div>
+        <div style="text-align:right;">
+          <span class="eyebrow mono" style="display:block;margin-bottom:4px;font-size:10px;color:#67645c;">AMOUNT DUE</span>
+          <div id="order-amount-badge" class="order-summary-amount mono">0.00010000 ZEC</div>
+        </div>
+      </section>
+
+      <!-- CHECKOUT FRAMEWORK -->
+            <!-- REVIEWER GUIDED WALKTHROUGH -->
+      <section class="reviewer-start" aria-label="Guided payment demonstration" style="margin-bottom:24px;">
+        <div class="reviewer-start-copy">
+          <span class="eyebrow mono">02 / INTERACTIVE WALKTHROUGH</span>
+          <h3>Connect. Request. Verify.</h3>
+          <p>Experience the state machine in motion: derive a ZIP-321 request, detect exact payment output, accumulate confirmations, and settle to a replay-safe receipt.</p>
+        </div>
+        <div class="reviewer-start-action">
+          <button id="guide-run" class="guide-button" type="button">Walk through a complete payment <span aria-hidden="true">↗</span></button>
+          <span id="guide-status" class="guide-status mono" role="status" aria-live="polite">1-CLICK REVIEWER WALKTHROUGH · NO WALLET REQUIRED</span>
+        </div>
+      </section>
+
+      <div id="checkout">
+                <div class="checkout-frame">
+          <div class="checkout-frame-top mono"><div><span class="frame-dots" aria-hidden="true">● ● ●</span> ZPS / REFERENCE CHECKOUT</div><span>SHIELDED PAYMENTS, RESOLVED</span></div>
+          <div class="checkout-grid">
+            <section class="checkout-card" aria-labelledby="request-title">
+              <div class="card-heading">
+                <div><p class="eyebrow mono">PAYMENT / 001</p><h3 id="request-title">The request.</h3></div>
+                <span id="session-badge" class="status-pill">READY</span>
+              </div>
+              <div class="amount-block"><span id="amount-display" class="amount">—</span><span class="currency">ZEC</span></div>
+              <p id="recipient-display" class="muted recipient">Connect a wallet to create a real testnet payment request.</p>
+              <div class="qr-stage"><span class="qr-label mono">SCAN / ZIP-321</span><div id="qr-frame" class="qr-frame" aria-label="Payment QR code"><div class="qr-empty"><span class="qr-mark">↗</span><span>Your payment request<br />appears here</span></div></div><span class="qr-footer mono">AMOUNT + MEMO, EXACTLY MATCHED</span></div>
+              <label class="field-label" for="uri-display">ZIP-321 REQUEST URI</label>
+              <div class="uri-row"><textarea id="uri-display" readonly rows="3" spellcheck="false" aria-label="Generated ZIP-321 request URI"></textarea><button id="copy-uri" class="button button-secondary" type="button" disabled>Copy ↗</button></div>
+              <div class="expiry-row"><span>SESSION EXPIRES IN</span><strong id="countdown">—</strong></div>
+            </section>
+
+            <aside class="control-column">
+              <section class="controls-card" aria-labelledby="control-title">
+                <div class="card-heading compact"><div><p class="eyebrow mono">CONTROL / 002</p><h3 id="control-title">Make it exact.</h3></div><span id="mode-badge" class="mode-badge">Real testnet</span></div>
+                <p class="form-intro">A request is a contract with your checkout. Set its amount and correlation memo before creating the session.</p>
+                <div class="mode-switch" role="group" aria-label="Checkout mode"><button id="mode-testnet" class="mode-button active" type="button">Real testnet</button><button id="mode-simulation" class="mode-button" type="button">Developer simulation</button></div>
+                <p id="real-mode-notice" class="compatibility-note hidden" role="status"></p>
+                <div id="real-config" class="real-config">
+                  <p class="config-note">Experimental real Zcash testnet observation. The verified public gRPC-Web gateway is prefilled. A testnet Unified Full Viewing Key is required to verify shielded Sapling memos; never enter spending keys. A viewing key reveals wallet activity. It is used locally in this browser, not sent to the gateway.</p>
+                  <label class="field-label" for="lightwalletd-url">TESTNET GRPC-WEB ENDPOINT</label><input id="lightwalletd-url" type="url" value="https://zps-testnet-gateway.onrender.com" placeholder="https://your-proxy.example" autocomplete="off" />
+                  <label class="field-label" for="viewing-key">VIEW-ONLY UFVK</label><input id="viewing-key" type="password" placeholder="Required each time; view-only testnet key" autocomplete="off" />
+                  <label class="field-label" for="birthday-height">ACCOUNT BIRTHDAY HEIGHT</label><input id="birthday-height" type="number" min="0" placeholder="Required for new account" />
+                  <button id="open-testnet" class="button button-secondary full-width" type="button">Open view-only wallet ↗</button>
+                  <p id="wallet-connection-status" class="compatibility-note" role="status" aria-live="polite">Connect a view-only testnet wallet before creating a real payment request.</p>
+                </div>
+                <label class="field-label" for="amount-input">01 / AMOUNT IN ZEC</label>
+                <div class="amount-input-row"><input id="amount-input" type="text" inputmode="decimal" value="0.00010000" /><span>ZEC</span></div>
+                <label class="field-label" for="memo-input">02 / CORRELATION MEMO</label>
+                <input id="memo-input" type="text" value="order-123" maxlength="512" />
+                <div class="button-stack">
+                  <button id="create-session" class="button button-primary" type="button">Create payment session <span aria-hidden="true">↗</span></button>
+                  <button id="refresh-status" class="button button-secondary" type="button">Refresh payment status <span aria-hidden="true">↻</span></button>
+                  <button id="load-verified-proof-2" class="button button-secondary" type="button" style="font-size:11px;">⚡ Replay On-Chain Proof (Block 4,490,144) ↗</button>
+                  <button id="reset-demo" class="button button-quiet" type="button">Start a fresh request</button>
+                </div>
+                <p id="error-message" class="error-message" role="alert"></p>
+              </section>
+              <details id="simulation-controls" class="simulation-card">
+                <summary class="scenario-summary"><span>EXPLORE EDGE CASES</span><strong>Manual controls <span aria-hidden="true">+</span></strong></summary>
+                <div class="card-heading compact"><div><p class="eyebrow mono">TEST SCENARIOS / 003</p><h3>Move the payment.</h3></div></div>
+                <p class="simulation-description">DEVELOPER SIMULATION ONLY · NO FUNDS TRANSFERRED. These scenarios exercise the actual public SDK through a simulated wallet adapter. They never broadcast a transaction.</p>
+                <div class="simulation-grid">
+                  <button data-scenario="exact" class="scenario-button" type="button"><span>01</span> Exact output ↗</button>
+                  <button data-scenario="confirming" class="scenario-button" type="button"><span>02</span> +1 confirmation ↗</button>
+                  <button data-scenario="paid" class="scenario-button" type="button"><span>03</span> Reach PAID ↗</button>
+                  <button data-scenario="ambiguous" class="scenario-button" type="button"><span>04</span> Ambiguous ↗</button>
+                  <button data-scenario="reorg" class="scenario-button" type="button"><span>05</span> Reorg ↗</button>
+                  <button data-scenario="expire" class="scenario-button" type="button"><span>06</span> Expire ↗</button>
+                </div>
+              </details>
+            </aside>
+          </div>
+
+          <section class="timeline-card" aria-labelledby="timeline-title">
+            <div class="card-heading compact"><div><p class="eyebrow mono">THE DECISION / 004</p><h3 id="timeline-title">From request to receipt.</h3></div><span id="lifecycle-note" class="lifecycle-note">Waiting for a session</span></div>
+            <ol id="timeline" class="timeline">
+              <li data-timeline="AWAITING_PAYMENT"><span class="timeline-node"></span><span>Awaiting payment</span></li>
+              <li data-timeline="DETECTED"><span class="timeline-node"></span><span>Detected</span></li>
+              <li data-timeline="CONFIRMING"><span class="timeline-node"></span><span>Confirming</span></li>
+              <li data-timeline="PAID"><span class="timeline-node"></span><span>Paid</span></li>
+            </ol>
+            <div id="exception-state" class="exception-state hidden"></div>
+          </section>
+
+          <section class="details-card" aria-labelledby="details-title">
+            <div class="card-heading compact"><div><p class="eyebrow mono">AN AUDIT TRAIL / 005</p><h3 id="details-title">The evidence.</h3></div></div>
+            <dl class="details-grid">
+              <div><dt>Session identity</dt><dd id="detail-session">—</dd></div>
+              <div><dt>Correlation memo</dt><dd id="detail-memo">—</dd></div>
+              <div><dt>Payment identity</dt><dd id="detail-payment">—</dd></div>
+              <div><dt>Transaction ID</dt><dd id="detail-txid">—</dd></div>
+              <div><dt>Confirmations</dt><dd id="detail-confirmations">—</dd></div>
+              <div><dt>Required</dt><dd>2</dd></div>
+              <div><dt>Shielded pool</dt><dd id="detail-pool">—</dd></div>
+              <div><dt>Expires at</dt><dd id="detail-expiry">—</dd></div>
+              <div><dt>Observation mode</dt><dd id="detail-mode">Demo simulation</dd></div>
+              <div><dt>Payment safety</dt><dd>Persisted / replay-safe</dd></div>
+            </dl>
+          </section>
+          <div class="checkout-disclaimer mono"><span>THIS IS A REFERENCE IMPLEMENTATION</span><span>LIVE HISTORICAL PROOF AVAILABLE BELOW ↓</span></div>
+        </div>
+
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-top mono">
+        <span>© ZPS / 2026</span>
+        <span>REFERENCE CHECKOUT APPLICATION</span>
+        <a href="./">RETURN TO HOME ↑</a>
+      </div>
+    </footer>
+
+
+  </body>
+</html>
