@@ -148,10 +148,15 @@ const testnetSessionStorage: KeyValueStorage = {
   removeItem: (key) => window.localStorage.removeItem(`checkout:testnet:${key}`)
 };
 
+// WebZjs serializes its wallet database, including view-only account records.
+// Never place those serialized bytes unencrypted in localStorage. Until encrypted
+// DB persistence is implemented, the wallet DB is isolated in volatile memory.
+// Returning merchants unlock their encrypted profile and rescan from birthday.
+const transientWalletDb = new Map<string, string>();
 const walletStorage: KeyValueStorage = {
-  getItem: (key) => window.localStorage.getItem(`wallet:${key}`),
-  setItem: (key, value) => window.localStorage.setItem(`wallet:${key}`, value),
-  removeItem: (key) => window.localStorage.removeItem(`wallet:${key}`)
+  getItem: (key) => transientWalletDb.get(key) ?? null,
+  setItem: (key, value) => { transientWalletDb.set(key, value); },
+  removeItem: (key) => { transientWalletDb.delete(key); }
 };
 
 class SimulationClock {
