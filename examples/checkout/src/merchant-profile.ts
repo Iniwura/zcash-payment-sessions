@@ -76,7 +76,8 @@ export async function openMerchantProfile(sealed: string, passphrase: string): P
   let plaintext: Uint8Array;
   try {
     plaintext = new Uint8Array(await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv, additionalData: AAD }, key, fromBase64(vault.data)
+      { name: "AES-GCM", iv: iv as BufferSource, additionalData: AAD },
+      key, fromBase64(vault.data) as BufferSource
     ));
   } catch {
     throw new Error("Unable to unlock merchant profile. Check your passphrase");
