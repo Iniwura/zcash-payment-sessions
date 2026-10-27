@@ -1,0 +1,29 @@
+name: Merchant viewing-profile security smoke
+on:
+  push:
+    branches: [feat/merchant-wallet-profile]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.18.0"
+      - name: Verify encrypted merchant profile and wrong-passphrase denial
+        run: node --experimental-strip-types --test tests/merchant-profile-smoke.test.mjs
+      - name: Verify onboarding controls and no spending keys
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path("examples/checkout/checkout.html").read_text()
+          ts=Path("examples/checkout/src/main.ts").read_text()
+          for key in ("merchant-setup-passphrase","merchant-unlock-passphrase","merchant-unlock","merchant-forget","merchant-advanced"):
+              assert f'id="{key}"' in html, key
+          assert "sealMerchantProfile" in ts and "openMerchantProfile" in ts
+          assert 'storageKey: "testnet:db"' in ts
+          print("Merchant UI and existing view-only wallet integration: PASS")
+          PY

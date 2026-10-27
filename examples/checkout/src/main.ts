@@ -13,6 +13,7 @@ import { describeSessionException } from "./ui-state.js";
 import { SimulatedWallet } from "./simulated-wallet.js";
 import { getRealTestnetModeAvailability } from "./runtime-capabilities.js";
 import { ProductTour } from "./product-tour.js";
+import { MERCHANT_PROFILE_KEY, sealMerchantProfile, openMerchantProfile } from "./merchant-profile.js";
 import {
   DEFAULT_TESTNET_GRPC_WEB_ENDPOINT,
   parseTestnetBirthday
@@ -55,6 +56,12 @@ const elements = {
   memoInput: required<HTMLInputElement>("memo-input"),
   lightwalletdUrl: required<HTMLInputElement>("lightwalletd-url"),
   viewingKey: required<HTMLInputElement>("viewing-key"),
+  setupPassphrase: required<HTMLInputElement>("merchant-setup-passphrase"),
+  unlockPassphrase: required<HTMLInputElement>("merchant-unlock-passphrase"),
+  unlockProfileButton: required<HTMLButtonElement>("merchant-unlock"),
+  forgetProfileButton: required<HTMLButtonElement>("merchant-forget"),
+  merchantUnlock: required<HTMLElement>("merchant-unlock-panel"),
+  merchantAdvanced: required<HTMLDetailsElement>("merchant-advanced"),
   birthdayHeight: required<HTMLInputElement>("birthday-height"),
   openTestnet: required<HTMLButtonElement>("open-testnet"),
   createSession: required<HTMLButtonElement>("create-session"),
@@ -76,6 +83,23 @@ const elements = {
 const realTestnetMode = getRealTestnetModeAvailability(window.crossOriginIsolated);
 const MODE_STORAGE_KEY = "checkout:active-mode";
 
+function hasStoredMerchantProfile(): boolean {
+  try { return window.localStorage.getItem(MERCHANT_PROFILE_KEY) !== null; }
+  catch { return false; }
+}
+
+function renderMerchantOnboarding(): void {
+  const saved = hasStoredMerchantProfile();
+  elements.merchantUnlock.classList.toggle("hidden", !saved || mode !== "testnet");
+  if (saved && mode === "testnet" && runtime?.browserWallet === undefined) {
+    elements.merchantAdvanced.open = false;
+  }
+  if (runtime?.browserWallet !== undefined && mode === "testnet") {
+    elements.merchantAdvanced.open = false;
+    elements.merchantUnlock.classList.add("hidden");
+  }
+}
+
 function getInitialMode(): DemoMode {
   try {
     const saved =
@@ -90,8 +114,9 @@ function getInitialMode(): DemoMode {
   } catch {
     // Ignore storage access errors in restricted iframe contexts.
   }
-  // Default to simulation for zero-friction first-time judge experience
-  return "simulation";
+  // Returning merchants see their saved wallet unlock. Other visitors can use
+  // the deterministic public SDK demonstration without a viewing key.
+  return hasStoredMerchantProfile() && realTestnetMode.realTestnetEnabled ? "testnet" : "simulation";
 }
 
 function saveActiveMode(nextMode: DemoMode): void {
@@ -164,7 +189,7 @@ async function createSimulationRuntime(): Promise<Runtime> {
   };
 }
 
-async function openTestnetRuntime(): Promise<Runtime> {
+async function openTestnetRuntime(viewingKeyOverride?: string): Promise<Runtime> {
   const lightwalletdUrl =
     elements.lightwalletdUrl.value.trim() ||
     DEFAULT_TESTNET_GRPC_WEB_ENDPOINT;
@@ -174,7 +199,7 @@ async function openTestnetRuntime(): Promise<Runtime> {
 
   // Viewing material is handled only in memory for the active checkout.
   // Do not send it to the gateway or persist it as application state.
-  const viewingKey = elements.viewingKey.value.trim();
+  const viewingKey = (viewingKeyOverride ?? elements.viewingKey.value).trim();
   if (viewingKey.length === 0) {
     throw new Error("Enter your testnet view-only UFVK to verify shielded memos. Re-enter it whenever you reopen the wallet; never use a spending key.");
   }
@@ -267,6 +292,7 @@ async function initialize(): Promise<void> {
   }
   bindEvents();
   render();
+  renderMerchantOnboarding();
   setupEditorialMotion();
 }
 
@@ -315,6 +341,14 @@ function bindEvents(): void {
     selectMode("testnet");
   });
   elements.openTestnet.addEventListener("click", () => void openTestnetWallet());
+  elements.unlockProfileButton.addEventListener("click", () => void unlockMerchantWallet());
+  elements.forgetProfileButton.addEventListener("click", () => {
+    window.localStorage.removeItem(MERCHANT_PROFILE_KEY);
+    elements.unlockPassphrase.value = "";
+    elements.merchantAdvanced.open = true;
+    renderMerchantOnboarding();
+    elements.walletConnectionStatus.textContent = "Saved unlock profile removed. Existing wallet database and payment sessions were preserved.";
+  });
   elements.createSession.addEventListener("click", () => void createSession());
   elements.guideRun.addEventListener("click", () => void runGuidedCheckout());
   elements.refreshStatus.addEventListener("click", () => void refreshStatus());
@@ -361,6 +395,31 @@ function bindEvents(): void {
   });
 }
 
+async function unlockMerchantWallet(): Promise<void> {
+  const passphrase = elements.unlockPassphrase.value;
+  elements.unlockPassphrase.value = "";
+  if (passphrase.length === 0) {
+    showError("Enter the passphrase used to protect this merchant profile");
+    return;
+  }
+  const ciphertext = window.localStorage.getItem(MERCHANT_PROFILE_KEY);
+  if (ciphertext === null) {
+    showError("No saved merchant profile was found");
+    return;
+  }
+  elements.unlockProfileButton.disabled = true;
+  try {
+    const profile = await openMerchantProfile(ciphertext, passphrase);
+    elements.lightwalletdUrl.value = profile.endpoint;
+    if (profile.birthdayHeight !== undefined) elements.birthdayHeight.value = String(profile.birthdayHeight);
+    await openTestnetWallet(profile.ufvk);
+  } catch (error) {
+    showError(error);
+  } finally {
+    elements.unlockProfileButton.disabled = false;
+  }
+}
+
 async function selectMode(nextMode: DemoMode): Promise<void> {
   walletConnectionEpoch += 1;
   openingTestnetWallet = false;
@@ -373,6 +432,7 @@ async function selectMode(nextMode: DemoMode): Promise<void> {
     mode = "simulation";
     elements.walletConnectionStatus.textContent = "";
     render();
+    renderMerchantOnboarding();
     return;
   }
 
@@ -386,9 +446,10 @@ async function selectMode(nextMode: DemoMode): Promise<void> {
   mode = "testnet";
   elements.walletConnectionStatus.textContent = "Connect a view-only testnet wallet before creating a real payment request.";
   render(null, undefined);
+  renderMerchantOnboarding();
 }
 
-async function openTestnetWallet(): Promise<void> {
+async function openTestnetWallet(viewingKeyOverride?: string): Promise<void> {
   if (openingTestnetWallet) return;
   clearError();
   if (!realTestnetMode.realTestnetEnabled) {
@@ -396,6 +457,15 @@ async function openTestnetWallet(): Promise<void> {
     return;
   }
 
+  const passphrase = viewingKeyOverride === undefined ? elements.setupPassphrase.value : "";
+  if (passphrase.length > 0 && passphrase.length < 12) {
+    showError("Use at least 12 characters to save a reusable merchant profile");
+    return;
+  }
+  const profileKey = viewingKeyOverride ?? elements.viewingKey.value.trim();
+  const birthdayText = elements.birthdayHeight.value.trim();
+  const profileBirthday = birthdayText === "" ? undefined : parseTestnetBirthday(birthdayText);
+  const endpoint = elements.lightwalletdUrl.value.trim() || DEFAULT_TESTNET_GRPC_WEB_ENDPOINT;
   const epoch = ++walletConnectionEpoch;
   openingTestnetWallet = true;
   elements.openTestnet.disabled = true;
@@ -403,14 +473,29 @@ async function openTestnetWallet(): Promise<void> {
   elements.walletConnectionStatus.textContent = "Opening the WebZjs view-only wallet and local memo verifier. This may take a moment.";
   render();
   try {
-    const next = await openTestnetRuntime();
+    const next = await openTestnetRuntime(viewingKeyOverride);
     if (epoch !== walletConnectionEpoch || mode !== "testnet") {
       next.browserWallet?.close();
       return;
     }
     runtime = next;
     elements.walletConnectionStatus.textContent = "View-only testnet wallet ready. Create a real request, then refresh to scan the chain.";
+    if (passphrase.length > 0) {
+      try {
+        const sealed = await sealMerchantProfile({
+          ufvk: profileKey, endpoint,
+          ...(profileBirthday === undefined ? {} : { birthdayHeight: profileBirthday })
+        }, passphrase);
+        window.localStorage.setItem(MERCHANT_PROFILE_KEY, sealed);
+        elements.walletConnectionStatus.textContent = "Merchant wallet ready. Encrypted viewing profile saved for future unlocks.";
+      } catch (error) {
+        showError(error);
+        elements.walletConnectionStatus.textContent = "Wallet is connected, but saving the encrypted profile failed.";
+      }
+    }
+    elements.merchantAdvanced.open = false;
     render();
+    renderMerchantOnboarding();
   } catch (error) {
     if (epoch === walletConnectionEpoch) {
       elements.walletConnectionStatus.textContent = "Could not open the view-only wallet. Check the error and try again.";
@@ -421,7 +506,9 @@ async function openTestnetWallet(): Promise<void> {
       openingTestnetWallet = false;
       elements.openTestnet.disabled = false;
       elements.openTestnet.textContent = "Open view-only wallet ↗";
+      elements.setupPassphrase.value = "";
       render();
+      renderMerchantOnboarding();
     }
   }
 }
