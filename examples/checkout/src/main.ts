@@ -543,11 +543,29 @@ async function refreshStatus(): Promise<void> {
 
 async function runGuidedCheckout(): Promise<void> {
   if (mode === "testnet") {
+    if (runtime?.browserWallet !== undefined) {
+      const previousId = runtime.controller.view.session?.id;
+      await createSession();
+      if (runtime.controller.view.session !== null &&
+          runtime.controller.view.session.id !== previousId) {
+        elements.guideStatus.textContent = "REAL PAYMENT REQUEST GENERATED · AWAITING CHAIN EVIDENCE";
+        elements.qrFrame.scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+          block: "center"
+        });
+      }
+      return;
+    }
     elements.realConfig.scrollIntoView({
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
       block: "center"
     });
-    elements.viewingKey.focus({ preventScroll: true });
+    if (hasStoredMerchantProfile()) {
+      elements.unlockPassphrase.focus({ preventScroll: true });
+    } else {
+      elements.merchantAdvanced.open = true;
+      elements.viewingKey.focus({ preventScroll: true });
+    }
     return;
   }
   if (guidedRunActive || runtime?.simulationWallet === undefined) return;
@@ -701,7 +719,11 @@ function render(
   elements.guideRun.disabled = guideRunDisabled;
   if (!guidedRunActive) {
     elements.guideRun.innerHTML = mode === "testnet"
-      ? 'Connect a real testnet wallet <span aria-hidden="true">↗</span>'
+      ? (runtime?.browserWallet !== undefined
+          ? 'Create real payment request <span aria-hidden="true">↗</span>'
+          : hasStoredMerchantProfile()
+            ? 'Unlock merchant wallet <span aria-hidden="true">↗</span>'
+            : 'Connect merchant wallet <span aria-hidden="true">↗</span>')
       : 'Run the guided simulation <span aria-hidden="true">↗</span>';
     elements.guideStatus.textContent = mode === "testnet"
       ? "REAL TESTNET · VIEW-ONLY WALLET · NO SPENDING KEYS"
