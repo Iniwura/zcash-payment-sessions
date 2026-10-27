@@ -15,6 +15,10 @@ jobs:
           node-version: "24.18.0"
       - name: Verify encrypted merchant profile and wrong-passphrase denial
         run: node --experimental-strip-types --test tests/merchant-profile-smoke.test.mjs
+      - name: Fast TypeScript security-module check
+        run: |
+          npm install --prefix /tmp/zps-merchant-ts --no-save --silent typescript@7.0.2
+          /tmp/zps-merchant-ts/node_modules/.bin/tsc --noEmit --strict --skipLibCheck --target ES2022 --module ESNext --lib ES2022,DOM examples/checkout/src/merchant-profile.ts
       - name: Verify onboarding controls and no spending keys
         run: |
           python3 - <<'PY'
