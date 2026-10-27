@@ -13,6 +13,7 @@ import { describeSessionException } from "./ui-state.js";
 import { SimulatedWallet } from "./simulated-wallet.js";
 import { getRealTestnetModeAvailability } from "./runtime-capabilities.js";
 import { ProductTour } from "./product-tour.js";
+import { MERCHANT_PROFILE_KEY, sealMerchantProfile, openMerchantProfile } from "./merchant-profile.js";
 import {
   DEFAULT_TESTNET_GRPC_WEB_ENDPOINT,
   parseTestnetBirthday
@@ -55,6 +56,12 @@ const elements = {
   memoInput: required<HTMLInputElement>("memo-input"),
   lightwalletdUrl: required<HTMLInputElement>("lightwalletd-url"),
   viewingKey: required<HTMLInputElement>("viewing-key"),
+  setupPassphrase: required<HTMLInputElement>("merchant-setup-passphrase"),
+  unlockPassphrase: required<HTMLInputElement>("merchant-unlock-passphrase"),
+  unlockProfileButton: required<HTMLButtonElement>("merchant-unlock"),
+  forgetProfileButton: required<HTMLButtonElement>("merchant-forget"),
+  merchantUnlock: required<HTMLElement>("merchant-unlock-panel"),
+  merchantAdvanced: required<HTMLDetailsElement>("merchant-advanced"),
   birthdayHeight: required<HTMLInputElement>("birthday-height"),
   openTestnet: required<HTMLButtonElement>("open-testnet"),
   createSession: required<HTMLButtonElement>("create-session"),
@@ -76,6 +83,23 @@ const elements = {
 const realTestnetMode = getRealTestnetModeAvailability(window.crossOriginIsolated);
 const MODE_STORAGE_KEY = "checkout:active-mode";
 
+function hasStoredMerchantProfile(): boolean {
+  try { return window.localStorage.getItem(MERCHANT_PROFILE_KEY) !== null; }
+  catch { return false; }
+}
+
+function renderMerchantOnboarding(): void {
+  const saved = hasStoredMerchantProfile();
+  elements.merchantUnlock.classList.toggle("hidden", !saved || mode !== "testnet");
+  if (saved && mode === "testnet" && runtime?.browserWallet === undefined) {
+    elements.merchantAdvanced.open = false;
+  }
+  if (runtime?.browserWallet !== undefined && mode === "testnet") {
+    elements.merchantAdvanced.open = false;
+    elements.merchantUnlock.classList.add("hidden");
+  }
+}
+
 function getInitialMode(): DemoMode {
   try {
     const saved =
@@ -90,8 +114,9 @@ function getInitialMode(): DemoMode {
   } catch {
     // Ignore storage access errors in restricted iframe contexts.
   }
-  // Default to simulation for zero-friction first-time judge experience
-  return "simulation";
+  // Real testnet is the primary merchant experience on isolated deployments.
+  // Simulation remains available only as an explicitly selected developer test.
+  return realTestnetMode.realTestnetEnabled ? "testnet" : "simulation";
 }
 
 function saveActiveMode(nextMode: DemoMode): void {
@@ -123,10 +148,15 @@ const testnetSessionStorage: KeyValueStorage = {
   removeItem: (key) => window.localStorage.removeItem(`checkout:testnet:${key}`)
 };
 
+// WebZjs serializes its wallet database, including view-only account records.
+// Never place those serialized bytes unencrypted in localStorage. Until encrypted
+// DB persistence is implemented, the wallet DB is isolated in volatile memory.
+// Returning merchants unlock their encrypted profile and rescan from birthday.
+const transientWalletDb = new Map<string, string>();
 const walletStorage: KeyValueStorage = {
-  getItem: (key) => window.localStorage.getItem(`wallet:${key}`),
-  setItem: (key, value) => window.localStorage.setItem(`wallet:${key}`, value),
-  removeItem: (key) => window.localStorage.removeItem(`wallet:${key}`)
+  getItem: (key) => transientWalletDb.get(key) ?? null,
+  setItem: (key, value) => { transientWalletDb.set(key, value); },
+  removeItem: (key) => { transientWalletDb.delete(key); }
 };
 
 class SimulationClock {
@@ -164,7 +194,7 @@ async function createSimulationRuntime(): Promise<Runtime> {
   };
 }
 
-async function openTestnetRuntime(): Promise<Runtime> {
+async function openTestnetRuntime(viewingKeyOverride?: string): Promise<Runtime> {
   const lightwalletdUrl =
     elements.lightwalletdUrl.value.trim() ||
     DEFAULT_TESTNET_GRPC_WEB_ENDPOINT;
@@ -174,7 +204,7 @@ async function openTestnetRuntime(): Promise<Runtime> {
 
   // Viewing material is handled only in memory for the active checkout.
   // Do not send it to the gateway or persist it as application state.
-  const viewingKey = elements.viewingKey.value.trim();
+  const viewingKey = (viewingKeyOverride ?? elements.viewingKey.value).trim();
   if (viewingKey.length === 0) {
     throw new Error("Enter your testnet view-only UFVK to verify shielded memos. Re-enter it whenever you reopen the wallet; never use a spending key.");
   }
@@ -267,38 +297,17 @@ async function initialize(): Promise<void> {
   }
   bindEvents();
   render();
+  renderMerchantOnboarding();
   setupEditorialMotion();
 }
 
+// Archived evidence is not a fresh transaction or an SDK state transition.
 function loadVerifiedProof(): void {
-  clearError();
-  elements.amountInput.value = "0.00010000";
-  elements.memoInput.value = "zps-final-live-2026-10-11T23:00:00.000Z-6d8ff56e-49e7-45da-9189-3b2e33f14f50";
-
-  elements.sessionBadge.textContent = "PAID";
-  elements.sessionBadge.dataset.status = "PAID";
-  elements.amountDisplay.textContent = "0.00010000";
-  elements.recipientDisplay.textContent = "Recipient · ztestsapling1ujye35tjf62yahf02rxu0yskq9exkv7jp0kkrpn2mn3nq708ua6dh4xh64n5zz9agzg7que7fal";
-  elements.uriDisplay.value = "zcash:ztestsapling1ujye35tjf62yahf02rxu0yskq9exkv7jp0kkrpn2mn3nq708ua6dh4xh64n5zz9agzg7que7fal?amount=0.0001&memo=enBzLWZpbmFsLWxpdmUtMjAyNi0xMC0xMVQyMzowMDowMC4wMDBaLTZkOGZmNTZlLTQ5ZTctNDVkYS05MTg5LTNiMmUzM2YxNGY1MA";
-  elements.countdown.textContent = "PAID · VERIFIED ON TESTNET";
-  elements.lifecycleNote.textContent = "Confirmed by canonical testnet consensus at block 4,490,144 (90 confirmations)";
-
-  const nodes = elements.timeline.querySelectorAll("li");
-  nodes.forEach((node) => node.classList.add("active"));
-
-  elements.detailSession.textContent = "50fd77e4-34bd-4508-b651-578e14f121cb";
-  elements.detailMemo.textContent = "zps-final-live-2026-10-11T23:00:00.000Z-6d8ff56e-49e7-45da-9189-3b2e33f14f50 (EXACT MATCH)";
-  elements.detailPayment.textContent = "fc7c6c121b5608f91a7ac9f2fd73116527730cf6c1ca478bca34dece83aec981:sapling:0";
-  elements.detailTxid.textContent = "81c9ae83cede34ca8b47cac1f60c7327651173fdf2c97a1af908561b126c7cfc";
-  elements.detailConfirmations.textContent = "90 confirmations (Mined height 4,490,144)";
-  elements.detailPool.textContent = "Sapling (Decrypted via Rust WASM)";
-  elements.detailExpiry.textContent = "2026-10-12T02:22:28.239Z";
-  elements.detailMode.textContent = "Verified Live Testnet Consensus Proof";
-
-  document.getElementById("timeline")?.scrollIntoView({
-    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-    block: "center"
-  });
+  window.open(
+    "https://github.com/Iniwura/zcash-payment-sessions/blob/main/LIVE_TESTNET_PROOF.md",
+    "_blank",
+    "noopener,noreferrer"
+  );
 }
 
 function bindEvents(): void {
@@ -315,6 +324,14 @@ function bindEvents(): void {
     selectMode("testnet");
   });
   elements.openTestnet.addEventListener("click", () => void openTestnetWallet());
+  elements.unlockProfileButton.addEventListener("click", () => void unlockMerchantWallet());
+  elements.forgetProfileButton.addEventListener("click", () => {
+    window.localStorage.removeItem(MERCHANT_PROFILE_KEY);
+    elements.unlockPassphrase.value = "";
+    elements.merchantAdvanced.open = true;
+    renderMerchantOnboarding();
+    elements.walletConnectionStatus.textContent = "Saved unlock profile removed. Existing wallet database and payment sessions were preserved.";
+  });
   elements.createSession.addEventListener("click", () => void createSession());
   elements.guideRun.addEventListener("click", () => void runGuidedCheckout());
   elements.refreshStatus.addEventListener("click", () => void refreshStatus());
@@ -361,6 +378,31 @@ function bindEvents(): void {
   });
 }
 
+async function unlockMerchantWallet(): Promise<void> {
+  const passphrase = elements.unlockPassphrase.value;
+  elements.unlockPassphrase.value = "";
+  if (passphrase.length === 0) {
+    showError("Enter the passphrase used to protect this merchant profile");
+    return;
+  }
+  const ciphertext = window.localStorage.getItem(MERCHANT_PROFILE_KEY);
+  if (ciphertext === null) {
+    showError("No saved merchant profile was found");
+    return;
+  }
+  elements.unlockProfileButton.disabled = true;
+  try {
+    const profile = await openMerchantProfile(ciphertext, passphrase);
+    elements.lightwalletdUrl.value = profile.endpoint;
+    if (profile.birthdayHeight !== undefined) elements.birthdayHeight.value = String(profile.birthdayHeight);
+    await openTestnetWallet(profile.ufvk);
+  } catch (error) {
+    showError(error);
+  } finally {
+    elements.unlockProfileButton.disabled = false;
+  }
+}
+
 async function selectMode(nextMode: DemoMode): Promise<void> {
   walletConnectionEpoch += 1;
   openingTestnetWallet = false;
@@ -373,6 +415,7 @@ async function selectMode(nextMode: DemoMode): Promise<void> {
     mode = "simulation";
     elements.walletConnectionStatus.textContent = "";
     render();
+    renderMerchantOnboarding();
     return;
   }
 
@@ -386,9 +429,10 @@ async function selectMode(nextMode: DemoMode): Promise<void> {
   mode = "testnet";
   elements.walletConnectionStatus.textContent = "Connect a view-only testnet wallet before creating a real payment request.";
   render(null, undefined);
+  renderMerchantOnboarding();
 }
 
-async function openTestnetWallet(): Promise<void> {
+async function openTestnetWallet(viewingKeyOverride?: string): Promise<void> {
   if (openingTestnetWallet) return;
   clearError();
   if (!realTestnetMode.realTestnetEnabled) {
@@ -396,6 +440,15 @@ async function openTestnetWallet(): Promise<void> {
     return;
   }
 
+  const passphrase = viewingKeyOverride === undefined ? elements.setupPassphrase.value : "";
+  if (passphrase.length > 0 && passphrase.length < 12) {
+    showError("Use at least 12 characters to save a reusable merchant profile");
+    return;
+  }
+  const profileKey = viewingKeyOverride ?? elements.viewingKey.value.trim();
+  const birthdayText = elements.birthdayHeight.value.trim();
+  const profileBirthday = birthdayText === "" ? undefined : parseTestnetBirthday(birthdayText);
+  const endpoint = elements.lightwalletdUrl.value.trim() || DEFAULT_TESTNET_GRPC_WEB_ENDPOINT;
   const epoch = ++walletConnectionEpoch;
   openingTestnetWallet = true;
   elements.openTestnet.disabled = true;
@@ -403,14 +456,29 @@ async function openTestnetWallet(): Promise<void> {
   elements.walletConnectionStatus.textContent = "Opening the WebZjs view-only wallet and local memo verifier. This may take a moment.";
   render();
   try {
-    const next = await openTestnetRuntime();
+    const next = await openTestnetRuntime(viewingKeyOverride);
     if (epoch !== walletConnectionEpoch || mode !== "testnet") {
       next.browserWallet?.close();
       return;
     }
     runtime = next;
     elements.walletConnectionStatus.textContent = "View-only testnet wallet ready. Create a real request, then refresh to scan the chain.";
+    if (passphrase.length > 0) {
+      try {
+        const sealed = await sealMerchantProfile({
+          ufvk: profileKey, endpoint,
+          ...(profileBirthday === undefined ? {} : { birthdayHeight: profileBirthday })
+        }, passphrase);
+        window.localStorage.setItem(MERCHANT_PROFILE_KEY, sealed);
+        elements.walletConnectionStatus.textContent = "Merchant wallet ready. Encrypted viewing profile saved for future unlocks.";
+      } catch (error) {
+        showError(error);
+        elements.walletConnectionStatus.textContent = "Wallet is connected, but saving the encrypted profile failed.";
+      }
+    }
+    elements.merchantAdvanced.open = false;
     render();
+    renderMerchantOnboarding();
   } catch (error) {
     if (epoch === walletConnectionEpoch) {
       elements.walletConnectionStatus.textContent = "Could not open the view-only wallet. Check the error and try again.";
@@ -421,7 +489,9 @@ async function openTestnetWallet(): Promise<void> {
       openingTestnetWallet = false;
       elements.openTestnet.disabled = false;
       elements.openTestnet.textContent = "Open view-only wallet ↗";
+      elements.setupPassphrase.value = "";
       render();
+      renderMerchantOnboarding();
     }
   }
 }
@@ -473,11 +543,29 @@ async function refreshStatus(): Promise<void> {
 
 async function runGuidedCheckout(): Promise<void> {
   if (mode === "testnet") {
+    if (runtime?.browserWallet !== undefined) {
+      const previousId = runtime.controller.view.session?.id;
+      await createSession();
+      if (runtime.controller.view.session !== null &&
+          runtime.controller.view.session.id !== previousId) {
+        elements.guideStatus.textContent = "REAL PAYMENT REQUEST GENERATED · AWAITING CHAIN EVIDENCE";
+        elements.qrFrame.scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+          block: "center"
+        });
+      }
+      return;
+    }
     elements.realConfig.scrollIntoView({
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
       block: "center"
     });
-    elements.viewingKey.focus({ preventScroll: true });
+    if (hasStoredMerchantProfile()) {
+      elements.unlockPassphrase.focus({ preventScroll: true });
+    } else {
+      elements.merchantAdvanced.open = true;
+      elements.viewingKey.focus({ preventScroll: true });
+    }
     return;
   }
   if (guidedRunActive || runtime?.simulationWallet === undefined) return;
@@ -631,7 +719,11 @@ function render(
   elements.guideRun.disabled = guideRunDisabled;
   if (!guidedRunActive) {
     elements.guideRun.innerHTML = mode === "testnet"
-      ? 'Connect a real testnet wallet <span aria-hidden="true">↗</span>'
+      ? (runtime?.browserWallet !== undefined
+          ? 'Create real payment request <span aria-hidden="true">↗</span>'
+          : hasStoredMerchantProfile()
+            ? 'Unlock merchant wallet <span aria-hidden="true">↗</span>'
+            : 'Connect merchant wallet <span aria-hidden="true">↗</span>')
       : 'Run the guided simulation <span aria-hidden="true">↗</span>';
     elements.guideStatus.textContent = mode === "testnet"
       ? "REAL TESTNET · VIEW-ONLY WALLET · NO SPENDING KEYS"

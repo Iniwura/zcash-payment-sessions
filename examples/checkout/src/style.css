@@ -805,3 +805,50 @@ textarea { min-height: 82px; padding: 13px; resize: vertical; overflow-wrap: any
     width: calc(100% - 32px);
   }
 }
+
+/* Merchant-first view-only wallet onboarding. Built on existing WebZjs runtime. */
+.merchant-profile-header { border-bottom: 1px solid var(--line); padding: 14px 0 18px; margin-bottom: 18px; }
+.merchant-profile-header strong { display:block; font-size:clamp(19px,2vw,26px); letter-spacing:-.05em; margin-top:8px; }
+.merchant-profile-header p { color:var(--grey); font-size:12px; line-height:1.5; margin:8px 0 0; }
+.merchant-unlock-panel { padding:18px; border:1px solid var(--ink); background:#fbfaf6; margin-bottom:18px; display:grid; gap:10px; }
+.merchant-unlock-panel .config-note { margin:0; }
+.merchant-advanced { border:1px solid var(--line); padding:13px 14px; margin-bottom:16px; }
+.merchant-advanced summary { cursor:pointer; font-weight:700; font-size:12px; padding:4px 0; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.merchant-advanced[open] summary { padding-bottom:14px; border-bottom:1px solid var(--line); margin-bottom:14px; }
+.merchant-advanced > input { min-width:0; }
+@media (max-width: 600px) { .merchant-unlock-panel {padding:12px;} }
+
+
+/* Mobile checkout header: two-column composition, no off-screen badges. */
+@media (max-width: 620px) {
+  .checkout-standalone-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 9px;
+    padding: 15px 16px;
+  }
+  .checkout-standalone-header .brand {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    font-size: 25px;
+  }
+  .checkout-standalone-header .back-link {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    font-size: 10px;
+  }
+  .checkout-standalone-header > div:last-child {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    min-width: 0;
+  }
+  .checkout-standalone-header .network-badge { display: none; }
+  .checkout-standalone-header #app-tour-btn { white-space: nowrap; }
+  .button-stack .button { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+  .merchant-advanced summary { min-width: 0; overflow-wrap: anywhere; }
+}

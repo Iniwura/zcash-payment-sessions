@@ -190,7 +190,7 @@ npm run demo:build
 npm run demo:dev
 ```
 
-The default mode on the cross-origin-isolated Vercel deployment is real TESTNET, not simulation.
+The default mode on a cross-origin-isolated Vercel deployment is real TESTNET; Developer simulation remains a separate, optional demonstration.
 It requires a view-only UFVK and wallet birthday before a request can be created. On GitHub
 Pages, where COOP/COEP headers are unavailable, real mode is gated and Developer simulation
 is selected instead. Simulation demonstrates detection, confirmation progression,
@@ -219,9 +219,7 @@ The Vite dev and preview servers send `Cross-Origin-Opener-Policy: same-origin` 
 `Cross-Origin-Embedder-Policy: require-corp`. These headers are required for the generated WebZjs
 worker pool and `SharedArrayBuffer`; without them the browser wallet cannot initialize.
 
-The app is a reference implementation rather than a claim of a live testnet payment. Configure a
-verified endpoint, import a testnet UFVK, and fund a testnet account before exercising real sync
-and matching.
+The public checkout supports real testnet sync. An earlier transaction completed the payment lifecycle through the SDK, but the deployed browser has not been shown completing a newly funded checkout session. Real testnet observation requires a testnet viewing key, a verified endpoint, and a funded external sender.
 
 ## License
 
@@ -240,3 +238,9 @@ npm run demo:build
 ```
 
 A testnet UFVK is required each time the wallet is opened so the memo hydrator can decrypt Sapling outputs locally. The checkout does not persist an additional plaintext UFVK; the underlying view-only wallet database remains in local browser storage. A viewing key grants access to payment information, so use a dedicated throwaway testnet account. Never enter a spending key or mainnet viewing key. A correct real-payment lifecycle and memo matching still require live transaction verification; they are **not yet established by the public gateway test**.
+
+## Merchant-first wallet onboarding (feature branch)
+
+The checkout supports a merchant-specific, **optional encrypted viewing profile**. The merchant connects a testnet Unified Full Viewing Key and birthday once. If they provide a separate passphrase (minimum 12 characters), the view-only key and gateway settings are encrypted locally with Web Crypto PBKDF2-SHA256 (310,000 iterations) and AES-256-GCM, then stored as ciphertext in that browser. On return, the merchant unlocks that locally encrypted profile with their passphrase; the WebZjs view-only wallet database lives in **volatile browser memory**, while payment-session metadata is stored separately. This prevents the serialized WebZjs database (which can contain viewing material) from being saved unencrypted in localStorage. Unlocking after a page reload recreates the wallet from the saved encrypted viewing key and birthday and may require rescanning blocks. No spending key, seed or mnemonic is accepted. Passphrase recovery is unavailable, and a compromised browser can still expose viewing data while unlocked. Older deployments may already have `wallet:testnet:db` in browser localStorage; users should remove that legacy item manually before treating their local storage as private.
+
+This is **not** a standard Zcash injected-wallet integration and not server-side monitoring. The customer only needs to scan or follow the ZIP-321 payment URI. The reference merchant tab must remain open for manual refresh and on-chain observations. A separate signed payment from an external testnet wallet remains necessary to establish new live checkout settlement.

@@ -46,6 +46,21 @@ def acceptance(browser, width: int, height: int) -> None:
         assert page.evaluate("window.crossOriginIsolated") is True
         if width < 900:
             doc_width = page.evaluate("document.documentElement.scrollWidth")
+            if doc_width > width + 2:
+                offenders = page.evaluate("""() => [...document.querySelectorAll('body *')]
+                  .filter(el => {
+                    const box = el.getBoundingClientRect();
+                    const style = getComputedStyle(el);
+                    return style.display !== 'none' &&
+                      (box.right > innerWidth + 2 || box.left < -2);
+                  })
+                  .slice(0, 12)
+                  .map(el => ({
+                    tag: el.tagName, id: el.id, className: String(el.className).slice(0, 90),
+                    right: Math.round(el.getBoundingClientRect().right),
+                    width: Math.round(el.getBoundingClientRect().width)
+                  }))""")
+                print("MOBILE_OVERFLOW_OFFENDERS:", offenders)
             assert doc_width <= width + 2, f"Horizontal overflow: {doc_width}px at {width}px"
 
         page.evaluate("document.activeElement.blur()")

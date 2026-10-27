@@ -25,7 +25,7 @@
       <div style="display:flex;align-items:center;gap:16px;">
         <button id="app-tour-btn" class="button button-primary" style="padding:8px 14px;font-size:11px;" type="button">App tour ⚡</button>
         <div class="network-badge mono">
-          <span class="disclosure-dot"></span> TESTNET GATEWAY ONLINE
+          <span class="disclosure-dot"></span> TESTNET GATEWAY CONFIGURED
         </div>
       </div>
     </header>
@@ -101,7 +101,7 @@
         <div class="reviewer-start-copy">
           <span class="eyebrow mono">02 / INTERACTIVE WALKTHROUGH</span>
           <h3>Connect. Request. Verify.</h3>
-          <p>Experience the state machine in motion: derive a ZIP-321 request, detect exact payment output, accumulate confirmations, and settle to a replay-safe receipt.</p>
+          <p>Connect a view-only merchant wallet to generate real Zcash testnet requests. Developer simulation is available separately for SDK testing and never transfers funds.</p>
         </div>
         <div class="reviewer-start-action">
           <button id="guide-run" class="guide-button" type="button">Walk through a complete payment <span aria-hidden="true">↗</span></button>
@@ -133,11 +133,29 @@
                 <div class="mode-switch" role="group" aria-label="Checkout mode"><button id="mode-testnet" class="mode-button active" type="button">Real testnet</button><button id="mode-simulation" class="mode-button" type="button">Developer simulation</button></div>
                 <p id="real-mode-notice" class="compatibility-note hidden" role="status"></p>
                 <div id="real-config" class="real-config">
+                  <div class="merchant-profile-header">
+                    <span class="eyebrow mono">MERCHANT WALLET / VIEW-ONLY SETUP</span>
+                    <strong>Set up once. Create payments anytime.</strong>
+                    <p>Customers only scan your payment QR. Only the merchant configures the receiving wallet.</p>
+                  </div>
+                  <div id="merchant-unlock-panel" class="merchant-unlock-panel hidden">
+                    <label class="field-label" for="merchant-unlock-passphrase">UNLOCK SAVED MERCHANT WALLET</label>
+                    <input id="merchant-unlock-passphrase" type="password" autocomplete="off" placeholder="Your merchant profile passphrase" />
+                    <button id="merchant-unlock" class="button button-primary full-width" type="button">Unlock merchant wallet ↗</button>
+                    <button id="merchant-forget" class="button button-quiet" type="button">Remove saved unlock profile</button>
+                    <p class="config-note">The viewing key is locally encrypted with your passphrase. Never use a spending key.</p>
+                  </div>
+                  <details id="merchant-advanced" class="merchant-advanced" open>
+                    <summary>Set up or reconnect a view-only wallet <span aria-hidden="true">↗</span></summary>
                   <p class="config-note">Experimental real Zcash testnet observation. The verified public gRPC-Web gateway is prefilled. A testnet Unified Full Viewing Key is required to verify shielded Sapling memos; never enter spending keys. A viewing key reveals wallet activity. It is used locally in this browser, not sent to the gateway.</p>
                   <label class="field-label" for="lightwalletd-url">TESTNET GRPC-WEB ENDPOINT</label><input id="lightwalletd-url" type="url" value="https://zps-testnet-gateway.onrender.com" placeholder="https://your-proxy.example" autocomplete="off" />
                   <label class="field-label" for="viewing-key">VIEW-ONLY UFVK</label><input id="viewing-key" type="password" placeholder="Required each time; view-only testnet key" autocomplete="off" />
                   <label class="field-label" for="birthday-height">ACCOUNT BIRTHDAY HEIGHT</label><input id="birthday-height" type="number" min="0" placeholder="Required for new account" />
-                  <button id="open-testnet" class="button button-secondary full-width" type="button">Open view-only wallet ↗</button>
+                  <label class="field-label" for="merchant-setup-passphrase">OPTIONAL / SAVE ENCRYPTED VIEWING PROFILE</label>
+                  <input id="merchant-setup-passphrase" type="password" autocomplete="new-password" placeholder="12+ character passphrase (optional)" />
+                  <p class="config-note">Optional: encrypt your testnet viewing key for future passphrase unlocks. The wallet's working database remains temporary and may rescan on return. No seed or spending key is stored.</p>
+                  <button id="open-testnet" class="button button-secondary full-width" type="button">Connect merchant wallet ↗</button>
+                  </details>
                   <p id="wallet-connection-status" class="compatibility-note" role="status" aria-live="polite">Connect a view-only testnet wallet before creating a real payment request.</p>
                 </div>
                 <label class="field-label" for="amount-input">01 / AMOUNT IN ZEC</label>
@@ -147,7 +165,7 @@
                 <div class="button-stack">
                   <button id="create-session" class="button button-primary" type="button">Create payment session <span aria-hidden="true">↗</span></button>
                   <button id="refresh-status" class="button button-secondary" type="button">Refresh payment status <span aria-hidden="true">↻</span></button>
-                  <button id="load-verified-proof-2" class="button button-secondary" type="button" style="font-size:11px;">⚡ Replay On-Chain Proof (Block 4,490,144) ↗</button>
+                  <button id="load-verified-proof-2" class="button button-secondary" type="button" style="font-size:11px;">View historical payment evidence (Oct 11) ↗</button>
                   <button id="reset-demo" class="button button-quiet" type="button">Start a fresh request</button>
                 </div>
                 <p id="error-message" class="error-message" role="alert"></p>
