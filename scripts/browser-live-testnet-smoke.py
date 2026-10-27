@@ -110,6 +110,7 @@ def main() -> None:
             assert page.locator("#lightwalletd-url").input_value() == ENDPOINT
             page.locator("#viewing-key").fill(viewing_key)
             page.locator("#birthday-height").fill(str(birthday))
+            page.locator("#merchant-setup-passphrase").fill("test merchant profile passphrase 2026")
             page.locator("#open-testnet").click()
 
             # "Real testnet" mode is selected before the asynchronous WebZjs
@@ -133,6 +134,25 @@ def main() -> None:
             assert page.locator("#session-badge").inner_text() in {"AWAITING PAYMENT", "EXPIRED"}
             assert page.locator("#error-message").inner_text().strip() == "", "Wallet sync/refresh returned an error"
             print("SYNC_OK real_browser_wallet=1, no_payment_sent=1")
+
+            # Test encrypted merchant profile across a full browser reload.
+            # No UFVK is printed, passed into app URLs, or stored in plaintext.
+            assert page.evaluate("""() => {
+              const v = localStorage.getItem('zps:merchant-profile:v1');
+              return !!v && !v.includes('uview') && v.includes('"data"');
+            }"""), "Saved merchant profile is missing or plaintext"
+            page.reload(wait_until="domcontentloaded", timeout=45000)
+            expect(page.locator("#mode-badge")).to_have_text("Real testnet", timeout=45000)
+            expect(page.locator("#merchant-unlock-panel")).to_be_visible()
+            page.locator("#merchant-unlock-passphrase").fill("test merchant profile passphrase 2026")
+            page.locator("#merchant-unlock").click()
+            expect(page.locator("#wallet-connection-status")).to_contain_text("wallet ready", timeout=120000)
+            expect(page.locator("#create-session")).to_be_enabled(timeout=120000)
+            assert page.locator("#viewing-key").input_value() == ""
+            expect(page.locator("#error-message")).to_be_empty()
+            page.locator("#create-session").click()
+            expect(page.locator("#qr-frame svg")).to_have_count(1, timeout=45000)
+            print("MERCHANT_UNLOCK_OK encrypted_profile=1 reloaded_wallet=1 new_session=1")
             assert not errors, f"Browser emitted {len(errors)} unhandled errors"
         except Exception:
             print("REAL_BROWSER_SMOKE_FAILED")

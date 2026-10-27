@@ -1,0 +1,68 @@
+name: Verify merchant onboarding and real testnet checkout
+
+on:
+  push:
+    branches: [feat/merchant-wallet-profile]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18.0
+          cache: npm
+      - name: Install reproducible WebZjs and Rust tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang
+          rustup toolchain install nightly-2025-01-07 --component rust-src --target wasm32-unknown-unknown
+          rustup target add wasm32-unknown-unknown
+          cargo install just --version 1.58.0 --locked
+          cargo install wasm-pack --version 0.13.1 --locked
+          npm run bootstrap:webzjs
+      - name: Build current-consensus Sapling hydrator WASM
+        run: bash scripts/build-sapling-memo-hydrator.sh
+      - name: Typecheck and full SDK tests
+        run: |
+          npm run typecheck
+          npm run build
+          npm test
+          npm run test:consumer
+          npm run demo:typecheck
+      - name: Build testnet-enabled checkout with hydrated memo WASM
+        run: |
+          GITHUB_ACTIONS=false npm run demo:build
+          test -s dist-demo/sapling-hydrator/sapling_memo_hydrator.js
+          test -s dist-demo/sapling-hydrator/sapling_memo_hydrator_bg.wasm
+      - name: Prepare Chromium acceptance environment
+        run: |
+          python3 -m venv /tmp/zps-browser-tests
+          /tmp/zps-browser-tests/bin/pip install playwright==1.55.0
+      - name: Real testnet browser wallet smoke (no funding or spend keys)
+        run: |
+          set -euo pipefail
+          KEY_DIR="$(mktemp -d)"
+          export ZPS_TEST_KEY_PATH="$KEY_DIR/testnet-ufvk.txt"
+          trap 'rm -rf "$KEY_DIR"' EXIT
+          node scripts/ci-create-testnet-viewing-key.mjs
+          GITHUB_ACTIONS=false npm run demo:preview -- --host 127.0.0.1 --port 5173 > /tmp/zps-testnet-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill "$PREVIEW_PID" 2>/dev/null || true; rm -rf "$KEY_DIR"' EXIT
+          for attempt in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:5173/ > /dev/null; then break; fi
+            sleep 1
+          done
+          /tmp/zps-browser-tests/bin/python scripts/browser-live-testnet-smoke.py
+
+      - name: Browser acceptance (simulation regression)
+        run: |
+          GITHUB_ACTIONS=false npm run demo:preview -- --host 127.0.0.1 --port 4173 > /tmp/zps-preview.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break || sleep 1; done
+          /tmp/zps-browser-tests/bin/python scripts/browser-checkout-smoke.py
