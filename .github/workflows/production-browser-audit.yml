@@ -21,7 +21,7 @@ jobs:
 
       - name: Test actual public Vercel checkout
         env:
-          PRODUCTION_URL: https://zcash-payment-sessions.vercel.app/
+          PRODUCTION_URL: https://zcash-payment-sessions.vercel.app/checkout
         run: |
           python3 - <<'PY'
           import os, shutil, json, traceback
@@ -50,6 +50,9 @@ jobs:
                       print("PAGE",width,"HTTP",res.status,"CROSS_ORIGIN_ISOLATED",page.evaluate("crossOriginIsolated"))
                       print("DEFAULT MODE",page.locator("#mode-badge").inner_text())
                       assert page.evaluate("crossOriginIsolated"), "Production lacks COOP/COEP browser isolation"
+                      if page.locator("#mode-badge").inner_text() != "Demo simulation":
+                          page.locator("#mode-simulation").click()
+                      expect(page.locator("#mode-badge")).to_have_text("Demo simulation",timeout=20000)
                       expect(page.locator("#session-badge")).to_have_text("AWAITING PAYMENT",timeout=45000)
                       expect(page.locator("#qr-frame svg")).to_have_count(1,timeout=15000)
                       assert page.locator("#uri-display").input_value().startswith("zcash:")
@@ -79,7 +82,9 @@ jobs:
                           assert scrollwidth <= 392, f"mobile overflow {scrollwidth}"
                       # Testnet requires an external gRPC-Web proxy and viewing key.
                       page.locator("#mode-testnet").click()
+                      expect(page.locator("#mode-badge")).to_have_text("Real testnet",timeout=15000)
                       endpoint=page.locator("#lightwalletd-url").input_value()
+                      assert endpoint == "https://zps-testnet-gateway.onrender.com", f"wrong default gateway {endpoint}"
                       print("PUBLIC TESTNET DEFAULT ENDPOINT",repr(endpoint))
                       assert not issues, "Browser errors: " + json.dumps(issues[:10])
                       assert not [r for r in responses if r["status"]>=500], "Server errors: " + json.dumps(responses[:10])
