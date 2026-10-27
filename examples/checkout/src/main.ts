@@ -114,9 +114,9 @@ function getInitialMode(): DemoMode {
   } catch {
     // Ignore storage access errors in restricted iframe contexts.
   }
-  // Returning merchants see their saved wallet unlock. Other visitors can use
-  // the deterministic public SDK demonstration without a viewing key.
-  return hasStoredMerchantProfile() && realTestnetMode.realTestnetEnabled ? "testnet" : "simulation";
+  // Real testnet is the primary merchant experience on isolated deployments.
+  // Simulation remains available only as an explicitly selected developer test.
+  return realTestnetMode.realTestnetEnabled ? "testnet" : "simulation";
 }
 
 function saveActiveMode(nextMode: DemoMode): void {
@@ -301,35 +301,13 @@ async function initialize(): Promise<void> {
   setupEditorialMotion();
 }
 
+// Archived evidence is not a fresh transaction or an SDK state transition.
 function loadVerifiedProof(): void {
-  clearError();
-  elements.amountInput.value = "0.00010000";
-  elements.memoInput.value = "zps-final-live-2026-10-11T23:00:00.000Z-6d8ff56e-49e7-45da-9189-3b2e33f14f50";
-
-  elements.sessionBadge.textContent = "PAID";
-  elements.sessionBadge.dataset.status = "PAID";
-  elements.amountDisplay.textContent = "0.00010000";
-  elements.recipientDisplay.textContent = "Recipient · ztestsapling1ujye35tjf62yahf02rxu0yskq9exkv7jp0kkrpn2mn3nq708ua6dh4xh64n5zz9agzg7que7fal";
-  elements.uriDisplay.value = "zcash:ztestsapling1ujye35tjf62yahf02rxu0yskq9exkv7jp0kkrpn2mn3nq708ua6dh4xh64n5zz9agzg7que7fal?amount=0.0001&memo=enBzLWZpbmFsLWxpdmUtMjAyNi0xMC0xMVQyMzowMDowMC4wMDBaLTZkOGZmNTZlLTQ5ZTctNDVkYS05MTg5LTNiMmUzM2YxNGY1MA";
-  elements.countdown.textContent = "PAID · VERIFIED ON TESTNET";
-  elements.lifecycleNote.textContent = "Confirmed by canonical testnet consensus at block 4,490,144 (90 confirmations)";
-
-  const nodes = elements.timeline.querySelectorAll("li");
-  nodes.forEach((node) => node.classList.add("active"));
-
-  elements.detailSession.textContent = "50fd77e4-34bd-4508-b651-578e14f121cb";
-  elements.detailMemo.textContent = "zps-final-live-2026-10-11T23:00:00.000Z-6d8ff56e-49e7-45da-9189-3b2e33f14f50 (EXACT MATCH)";
-  elements.detailPayment.textContent = "fc7c6c121b5608f91a7ac9f2fd73116527730cf6c1ca478bca34dece83aec981:sapling:0";
-  elements.detailTxid.textContent = "81c9ae83cede34ca8b47cac1f60c7327651173fdf2c97a1af908561b126c7cfc";
-  elements.detailConfirmations.textContent = "90 confirmations (Mined height 4,490,144)";
-  elements.detailPool.textContent = "Sapling (Decrypted via Rust WASM)";
-  elements.detailExpiry.textContent = "2026-10-12T02:22:28.239Z";
-  elements.detailMode.textContent = "Verified Live Testnet Consensus Proof";
-
-  document.getElementById("timeline")?.scrollIntoView({
-    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-    block: "center"
-  });
+  window.open(
+    "https://github.com/Iniwura/zcash-payment-sessions/blob/main/LIVE_TESTNET_PROOF.md",
+    "_blank",
+    "noopener,noreferrer"
+  );
 }
 
 function bindEvents(): void {

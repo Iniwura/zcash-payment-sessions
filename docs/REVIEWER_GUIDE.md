@@ -13,7 +13,7 @@ The reference checkout provides two complementary modes:
 
 ### Path A: 30-second Developer Simulation (No wallet or funds required)
 If you do not have a testnet UFVK or testnet coins, switch the mode toggle to **Developer simulation**:
-1. Click **Run the guided simulation ↗** at the top.
+1. Click **Walk through a complete payment ↗** in Developer simulation mode.
 2. The public SDK immediately generates a valid ZIP-321 request and renders the QR code.
 3. The simulator steps through:
    ```text
@@ -28,7 +28,7 @@ When opened in a cross-origin isolated environment (such as the Vercel productio
 2. Enter a testnet Unified Full Viewing Key (UFVK) and an account birthday height.
    *(Note: The checkout accepts only view-only keys; spending keys and seed phrases are strictly forbidden and never accepted).*
 3. Click **Open view-only wallet ↗**. The browser initializes WebZjs in an isolated WASM worker thread and attaches the local current-consensus Sapling memo hydrator.
-4. Create a payment request and observe live on-chain status changes as shielded transactions are broadcast and mined.
+4. Create a payment request. If an external testnet sender pays it, refresh to observe the exact amount and memo matched to chain evidence; a new funded browser checkout payment has not yet been validated.
 
 ## 1:15 — Exact binding & replay protection
 

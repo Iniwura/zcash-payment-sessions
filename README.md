@@ -190,7 +190,7 @@ npm run demo:build
 npm run demo:dev
 ```
 
-The default mode on the cross-origin-isolated Vercel deployment is real TESTNET, not simulation.
+The default mode on a cross-origin-isolated Vercel deployment is real TESTNET; Developer simulation remains a separate, optional demonstration.
 It requires a view-only UFVK and wallet birthday before a request can be created. On GitHub
 Pages, where COOP/COEP headers are unavailable, real mode is gated and Developer simulation
 is selected instead. Simulation demonstrates detection, confirmation progression,
@@ -219,9 +219,7 @@ The Vite dev and preview servers send `Cross-Origin-Opener-Policy: same-origin` 
 `Cross-Origin-Embedder-Policy: require-corp`. These headers are required for the generated WebZjs
 worker pool and `SharedArrayBuffer`; without them the browser wallet cannot initialize.
 
-The app is a reference implementation rather than a claim of a live testnet payment. Configure a
-verified endpoint, import a testnet UFVK, and fund a testnet account before exercising real sync
-and matching.
+The public checkout supports real testnet sync. An earlier transaction completed the payment lifecycle through the SDK, but the deployed browser has not been shown completing a newly funded checkout session. Real testnet observation requires a testnet viewing key, a verified endpoint, and a funded external sender.
 
 ## License
 
