@@ -237,7 +237,7 @@ bash scripts/build-sapling-memo-hydrator.sh
 npm run demo:build
 ```
 
-A testnet UFVK is required each time the wallet is opened so the memo hydrator can decrypt Sapling outputs locally. The checkout does not persist an additional plaintext UFVK; the underlying view-only wallet database remains in local browser storage. A viewing key grants access to payment information, so use a dedicated throwaway testnet account. Never enter a spending key or mainnet viewing key. A correct real-payment lifecycle and memo matching still require live transaction verification; they are **not yet established by the public gateway test**.
+Initial wallet setup requires a testnet UFVK so the memo hydrator can decrypt Sapling outputs locally. An optional encrypted merchant profile can restore that view-only configuration after reload without storing the UFVK in plaintext; otherwise the UFVK must be provided again. The checkout does not persist an additional plaintext UFVK; the underlying view-only wallet database remains in local browser storage. A viewing key grants access to payment information, so use a dedicated throwaway testnet account. Never enter a spending key or mainnet viewing key. A correct real-payment lifecycle and memo matching still require live transaction verification; they are **not yet established by the public gateway test**.
 
 ## Merchant-first wallet onboarding (feature branch)
 

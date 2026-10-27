@@ -17,7 +17,7 @@ A ZIP-321 payment request tells a Zcash wallet where to send funds, but does not
 - Persistent sessions and consumed-payment ledger, across reloads.
 - Fail-closed expiry, ambiguity, reorg and replay handling.
 - V6-compatible Sapling memo hydration isolated in browser WASM.
-- Browser-only view-only merchant wallet with optional local passphrase-encrypted viewing profile (if released and validated).
+- Browser-only view-only merchant wallet with an optional locally passphrase-encrypted viewing profile, validated by security and reload smoke tests.
 - Documented on-chain testnet transaction, original SDK transitions and proof.
 
 ## Verified versus not verified
