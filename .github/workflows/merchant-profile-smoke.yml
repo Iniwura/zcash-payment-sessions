@@ -19,6 +19,10 @@ jobs:
         run: |
           npm install --prefix /tmp/zps-merchant-ts --no-save --silent typescript@7.0.2
           /tmp/zps-merchant-ts/node_modules/.bin/tsc --ignoreConfig --noEmit --strict --skipLibCheck --target ES2022 --module ESNext --lib ES2022,DOM examples/checkout/src/merchant-profile.ts
+      - name: Fast desktop and mobile CSS audit without WebZjs
+        run: |
+          python3 -m pip install --user --quiet playwright==1.55.0
+          python3 scripts/mobile-layout-smoke.py
       - name: Verify onboarding controls and no spending keys
         run: |
           python3 - <<'PY'
