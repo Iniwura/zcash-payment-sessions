@@ -1,0 +1,54 @@
+name: Capture ZPS production demo footage
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/capture-zps-demo.yml"
+      - "scripts/video/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Playwright for production capture
+        run: |
+          python3 -m pip install --user playwright==1.55.0
+          command -v google-chrome || command -v chromium
+          command -v ffmpeg
+      - name: Capture real public browser interactions
+        run: python3 -u scripts/video/capture_zps.py
+      - name: Get existing studio narration or neural fallback
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p demo-capture
+          set +e
+          curl --fail --location --silent --show-error --max-time 55 \
+            'https://www.aidocmaker.com/g0/audio?name=39c7b66927334b359a1ae4f4268dc151' \
+            --output demo-capture/narration.mp3
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 demo-capture/narration.mp3
+          audio_ok=$?
+          if [ "$audio_ok" -ne 0 ]; then
+            rm -f demo-capture/narration.mp3
+            python3 -m pip install --user edge-tts==7.2.7
+            python3 -m edge_tts --voice en-GB-RyanNeural \
+              --text "$(cat scripts/video/voiceover.txt)" \
+              --write-media demo-capture/narration.mp3
+            ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 demo-capture/narration.mp3
+          fi
+          ls -lh demo-capture/* | tail -20
+      - name: Upload actual screen recordings and narration
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zps-production-demo-original-footage
+          path: demo-capture/
+          if-no-files-found: warn
+          retention-days: 7
