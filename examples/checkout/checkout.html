@@ -22,7 +22,7 @@
         ZPS <span class="registered">TERMINAL</span>
       </div>
       <div style="display:flex;align-items:center;gap:16px;">
-        <button id="app-tour-btn" class="button button-primary" style="padding:8px 14px;font-size:11px;" type="button">App tour ⚡</button>
+        <button id="app-tour-btn" class="button button-primary" style="padding:8px 14px;font-size:11px;" type="button">Explore the app <span aria-hidden="true">↗</span></button>
         <div class="network-badge mono">
           <span class="disclosure-dot"></span> TESTNET GATEWAY CONFIGURED
         </div>
@@ -31,22 +31,22 @@
 
     <main id="content" class="checkout-standalone-wrap">
       <h1 class="sr-only">Zcash Payment Sessions reference checkout</h1>
-      <!-- STOREFRONT SIMULATOR CONSOLE -->
-      <section class="storefront" id="app-storefront" style="padding-top:10px;padding-bottom:36px;border-top:0;" aria-labelledby="storefront-title">
+      <!-- Example merchant orders. These presets never imply actual inventory or payment. -->
+      <section class="storefront" id="app-storefront" style="padding-top:10px;padding-bottom:36px;border-top:0;" aria-label="Sample order presets">
         <div class="section-rail mono" style="margin-bottom:20px;">
           <span>01 / SAMPLE ORDER PRESETS</span>
           <span>SELECT A PRESET OR CONFIGURE YOUR OWN ORDER</span>
         </div>
         <div class="storefront-grid">
-          <div class="storefront-card is-selected">
+          <div class="storefront-card">
             <div class="storefront-top mono"><span>PRODUCT / 001</span><span>INSTANT DELIVERY</span></div>
             <div>
-              <h3>☕ Cypherpunk Roast (12oz)</h3>
-              <p>Single-origin whole bean coffee roasted for privacy maximalists. Ships domestically with zero customer telemetry.</p>
+              <span class="storefront-signature" aria-hidden="true"><span>01</span><b>CR</b></span><h3>Cypherpunk Roast <span class="product-size">(12oz)</span></h3>
+              <p>A sample goods order showing how a specific amount and order memo become a shielded payment request.</p>
             </div>
             <div class="storefront-bottom">
               <div class="storefront-price mono">0.00010000 <span>ZEC (10k zat)</span></div>
-              <button type="button" class="button button-primary storefront-btn" data-product="Cypherpunk Roast (12oz)" data-amount="0.00010000" data-memo="order-coffee-918" aria-pressed="true">
+              <button type="button" class="button button-primary storefront-btn" data-product="Cypherpunk Roast (12oz)" data-amount="0.00010000" data-memo="order-coffee-918" aria-pressed="false">
                 Select Product ↓
               </button>
             </div>
@@ -55,8 +55,8 @@
           <div class="storefront-card">
             <div class="storefront-top mono"><span>SERVICE / 002</span><span>SUBSCRIPTION</span></div>
             <div>
-              <h3>🛡️ Shielded VPN Pass (30 Days)</h3>
-              <p>Zero-log WireGuard tunnel with cryptographic token authentication. Anonymous billing verified on Zcash testnet.</p>
+              <span class="storefront-signature" aria-hidden="true"><span>02</span><b>VP</b></span><h3>Shielded VPN Pass <span class="product-size">(30 days)</span></h3>
+              <p>A sample subscription order for demonstrating merchant payment correlation without using a customer identity.</p>
             </div>
             <div class="storefront-bottom">
               <div class="storefront-price mono">0.00050000 <span>ZEC (50k zat)</span></div>
@@ -69,8 +69,8 @@
           <div class="storefront-card">
             <div class="storefront-top mono"><span>COMMUNITY / 003</span><span>NODE SPONSOR</span></div>
             <div>
-              <h3>⚡ Zcash Privacy Node Grant</h3>
-              <p>Direct micro-grant funding dedicated community lightwalletd and Envoy gRPC-Web proxy testnet infrastructure.</p>
+              <span class="storefront-signature" aria-hidden="true"><span>03</span><b>ZN</b></span><h3>Zcash Privacy Node Grant</h3>
+              <p>A sample contribution request illustrating how distinct payments remain bound to distinct sessions.</p>
             </div>
             <div class="storefront-bottom">
               <div class="storefront-price mono">0.00100000 <span>ZEC (100k zat)</span></div>
@@ -86,8 +86,8 @@
       <section class="order-summary-box" aria-label="Order Summary">
         <div>
           <span class="eyebrow mono" style="display:block;margin-bottom:4px;font-size:10px;color:#67645c;">ACTIVE PAYMENT SESSION</span>
-          <div id="order-item-name" class="order-summary-item">Cypherpunk Roast (12oz)</div>
-          <div class="order-summary-memo mono">MEMO: <span id="order-memo-badge">order-coffee-918</span></div>
+          <div id="order-item-name" class="order-summary-item">Custom payment request</div>
+          <div class="order-summary-memo mono">MEMO: <span id="order-memo-badge">order-123</span></div>
         </div>
         <div class="order-summary-total">
           <span class="eyebrow mono" style="display:block;margin-bottom:4px;font-size:10px;color:#67645c;">AMOUNT DUE</span>
@@ -111,7 +111,10 @@
 
       <div id="checkout">
                 <div class="checkout-frame">
-          <div class="checkout-frame-top mono"><div><span class="frame-dots" aria-hidden="true">● ● ●</span> ZPS / REFERENCE CHECKOUT</div><span>SHIELDED PAYMENTS, RESOLVED</span></div>
+          <div class="checkout-frame-top mono"><div><span class="frame-dots" aria-hidden="true">● ● ●</span> ZPS / MERCHANT TERMINAL</div><span>REQUEST / OBSERVE / VERIFY</span></div>
+          <nav class="terminal-process mono" aria-label="Checkout sequence">
+            <span><b>01</b> ORDER</span><span><b>02</b> CONFIGURE</span><span><b>03</b> REQUEST</span><span><b>04</b> VERIFY</span>
+          </nav>
           <div class="checkout-grid">
             <section class="checkout-card" aria-labelledby="request-title">
               <div class="card-heading">
@@ -120,7 +123,18 @@
               </div>
               <div class="amount-block"><span id="amount-display" class="amount">—</span><span class="currency">ZEC</span></div>
               <p id="recipient-display" class="muted recipient">Connect a wallet to create a real testnet payment request.</p>
-              <div class="qr-stage"><span class="qr-label mono">SCAN / ZIP-321</span><div id="qr-frame" class="qr-frame" aria-label="Payment QR code"><div class="qr-empty"><span class="qr-mark">↗</span><span>Your payment request<br />appears here</span></div></div><span class="qr-footer mono">AMOUNT + MEMO, EXACTLY MATCHED</span></div>
+              <div class="qr-stage" id="qr-stage">
+                <div class="qr-stage-header mono"><span>02 / PAYMENT INSTRUMENT</span><span class="qr-protocol">ZIP–321 / ZCASH</span></div>
+                <div class="qr-instrument">
+                  <span class="qr-corner qr-corner-tl" aria-hidden="true"></span>
+                  <span class="qr-corner qr-corner-tr" aria-hidden="true"></span>
+                  <span class="qr-corner qr-corner-bl" aria-hidden="true"></span>
+                  <span class="qr-corner qr-corner-br" aria-hidden="true"></span>
+                  <div id="qr-frame" class="qr-frame" aria-label="Scannable payment request QR code"><div class="qr-empty"><span class="qr-mark">↗</span><span>Your payment request<br />appears here</span></div></div>
+                </div>
+                <div class="qr-stage-footer mono"><span id="qr-instrument-state">AWAITING REQUEST</span><span id="qr-instrument-action">SCAN WITH ZCASH WALLET</span></div>
+                <a id="qr-receipt-link" href="#receipt-panel" class="qr-receipt-link hidden mono">SESSION PAID / VIEW THE RECEIPT <span aria-hidden="true">↓</span></a>
+              </div>
               <label class="field-label" for="uri-display">ZIP-321 REQUEST URI</label>
               <div class="uri-row"><textarea id="uri-display" readonly rows="3" spellcheck="false" aria-label="Generated ZIP-321 request URI"></textarea><button id="copy-uri" class="button button-secondary" type="button" disabled>Copy ↗</button></div>
               <div class="expiry-row"><span>SESSION EXPIRES IN</span><strong id="countdown">—</strong></div>
@@ -130,7 +144,7 @@
               <section class="controls-card" aria-labelledby="control-title">
                 <div class="card-heading compact"><div><p class="eyebrow mono">CONTROL / 002</p><h3 id="control-title">Make it exact.</h3></div><span id="mode-badge" class="mode-badge">Real testnet</span></div>
                 <p class="form-intro">A request is a contract with your checkout. Set its amount and correlation memo before creating the session.</p>
-                <div class="mode-switch" role="group" aria-label="Checkout mode"><button id="mode-testnet" class="mode-button active" type="button">Real testnet</button><button id="mode-simulation" class="mode-button" type="button">Developer simulation</button></div>
+                <div class="mode-switch" id="mode-switch" role="group" aria-label="Checkout mode"><button id="mode-testnet" class="mode-button active" type="button">Real testnet</button><button id="mode-simulation" class="mode-button" type="button">Developer simulation</button></div>
                 <p id="real-mode-notice" class="compatibility-note hidden" role="status"></p>
                 <div id="real-config" class="real-config">
                   <div class="merchant-profile-header">
@@ -186,7 +200,7 @@
             </aside>
           </div>
 
-          <section class="timeline-card" aria-labelledby="timeline-title">
+          <section class="timeline-card" id="timeline-card" aria-labelledby="timeline-title">
             <div class="card-heading compact"><div><p class="eyebrow mono">THE DECISION / 004</p><h3 id="timeline-title">From request to receipt.</h3></div><span id="lifecycle-note" class="lifecycle-note">Waiting for a session</span></div>
             <ol id="timeline" class="timeline">
               <li data-timeline="AWAITING_PAYMENT"><span class="timeline-node"></span><span>Awaiting payment</span></li>
@@ -197,7 +211,7 @@
             <div id="exception-state" class="exception-state hidden"></div>
           </section>
 
-          <section class="details-card" aria-labelledby="details-title">
+          <section class="details-card" id="details-card" aria-labelledby="details-title">
             <div class="card-heading compact"><div><p class="eyebrow mono">AN AUDIT TRAIL / 005</p><h3 id="details-title">The evidence.</h3></div></div>
             <dl class="details-grid">
               <div><dt>Session identity</dt><dd id="detail-session">—</dd></div>
@@ -211,6 +225,34 @@
               <div><dt>Observation mode</dt><dd id="detail-mode">Demo simulation</dd></div>
               <div><dt>Payment safety</dt><dd>Persisted / replay-safe</dd></div>
             </dl>
+          </section>
+          <section class="receipt-panel hidden" id="receipt-panel" aria-labelledby="receipt-title">
+            <div class="receipt-ticket">
+              <div class="receipt-top mono"><span>ZPS / SETTLEMENT RECORD</span><span id="receipt-mode">—</span></div>
+              <div class="receipt-main">
+                <div>
+                  <div class="receipt-kicker mono"><span class="receipt-indicator"></span> EVIDENCE VERIFIED</div>
+                  <h3 id="receipt-title">Payment<br /><em>confirmed.</em></h3>
+                  <p id="receipt-subtitle">This receipt is generated from the recorded session and observed payment evidence.</p>
+                </div>
+                <div class="receipt-seal" aria-hidden="true"><b>ZPS</b><span>PAID</span><small>01/01</small></div>
+              </div>
+              <div class="receipt-data mono">
+                <div><span>AMOUNT</span><strong id="receipt-amount">—</strong></div>
+                <div><span>CONFIRMATIONS</span><strong id="receipt-confirmations">—</strong></div>
+                <div><span>SESSION ID</span><strong id="receipt-session">—</strong></div>
+                <div><span>PAYMENT ID</span><strong id="receipt-payment">—</strong></div>
+                <div><span>TRANSACTION</span><strong id="receipt-transaction">—</strong></div>
+                <div><span>CORRELATION MEMO</span><strong id="receipt-memo">—</strong></div>
+              </div>
+              <div class="receipt-bottom">
+                <div class="receipt-disclosure mono" id="receipt-disclosure">—</div>
+                <div class="receipt-actions">
+                  <button id="copy-receipt" class="button receipt-copy" type="button">Copy receipt <span aria-hidden="true">↗</span></button>
+                  <button id="print-receipt" class="button receipt-print" type="button">Print <span aria-hidden="true">↗</span></button>
+                </div>
+              </div>
+            </div>
           </section>
           <div class="checkout-disclaimer mono"><span>THIS IS A REFERENCE IMPLEMENTATION</span><span><a href="https://github.com/Iniwura/zcash-payment-sessions/blob/main/LIVE_TESTNET_PROOF.md" target="_blank" rel="noopener noreferrer">HISTORICAL REAL-PAYMENT PROOF ↗</a></span></div>
         </div>

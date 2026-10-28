@@ -8,36 +8,46 @@ export interface TourStep {
 
 export const TOUR_STEPS: TourStep[] = [
   {
-    stepNumber: "01 / 04",
-    title: "SELECT A STOREFRONT ITEM",
+    stepNumber: "01 / 06",
+    title: "Start with an order",
     targetId: "app-storefront",
-    description:
-      "Choose a pre-configured merchant product (Coffee, VPN, Node Grant) to test an exact-correlation payment session with a unique satoshi value and memo.",
-    highlightText: "INSTANT E-COMMERCE CONTEXT"
+    description: "Choose a sample order or enter your own amount and memo. Each request belongs to one payment session. These sample items are examples, not a live store.",
+    highlightText: "THE ORDER DEFINES WHAT TO EXPECT"
   },
   {
-    stepNumber: "02 / 04",
-    title: "THE ZIP-321 PAYMENT REQUEST",
-    targetId: "qr-frame",
-    description:
-      "ZPS generates a standards-compliant ZIP-321 URI and scannable QR code. The request is bound to the exact order memo and amount.",
-    highlightText: "STANDARDS-COMPLIANT URI"
+    stepNumber: "02 / 06",
+    title: "Choose your evidence source",
+    targetId: "mode-switch",
+    description: "Real testnet uses a merchant's view-only wallet to observe the chain. Developer simulation runs the same public SDK with synthetic observations. The two modes never share payment evidence.",
+    highlightText: "TESTNET AND SIMULATION STAY SEPARATE"
   },
   {
-    stepNumber: "03 / 04",
-    title: "STATE MACHINE & REPLAY LEDGER",
-    targetId: "timeline",
-    description:
-      "The payment progresses through verified states: Awaiting Payment → Detected → Confirming → Paid. Reorgs and timeouts are handled deterministically.",
-    highlightText: "NO DOUBLE CREDIT GUARANTEE"
+    stepNumber: "03 / 06",
+    title: "Prepare the merchant wallet",
+    targetId: "control-title",
+    description: "Only the merchant connects a view-only testnet wallet. Customers never need a viewing key. Returning merchants can unlock an encrypted local profile.",
+    highlightText: "VIEW-ONLY / NO SPENDING KEYS"
   },
   {
-    stepNumber: "04 / 04",
-    title: "BROWSER WASM & LIVE GATEWAY",
-    targetId: "controls-panel",
-    description:
-      "Client-side Rust WebAssembly trial-decrypts private Sapling memos in your browser without spending keys, streaming live testnet blocks via our public Render Envoy gateway.",
-    highlightText: "VIEW-ONLY PRIVACY PRESERVING"
+    stepNumber: "04 / 06",
+    title: "A request becomes an instrument",
+    targetId: "qr-stage",
+    description: "ZPS creates a ZIP-321 payment URI with the recipient, amount and correlation memo. The QR code itself stays unaltered so a compatible wallet can scan it.",
+    highlightText: "THE QR IS A REQUEST, NOT PROOF OF PAYMENT"
+  },
+  {
+    stepNumber: "05 / 06",
+    title: "Observe before crediting",
+    targetId: "timeline-card",
+    description: "Refresh to evaluate exact observations, confirmation depth, expiration and reorganization evidence. A payment is credited only after the SDK confirms the required evidence.",
+    highlightText: "AWAITING / DETECTED / CONFIRMING / PAID"
+  },
+  {
+    stepNumber: "06 / 06",
+    title: "Inspect the receipt and audit trail",
+    targetId: "details-card",
+    description: "Once a session reaches PAID, ZPS creates a printable evidence receipt below the audit trail. Simulation receipts are explicitly marked; historical real-payment proof is linked separately.",
+    highlightText: "RECEIPT ONLY AFTER VERIFIED PAID STATE"
   }
 ];
 
@@ -145,9 +155,13 @@ export class ProductTour {
 
     this.card.innerHTML = `
       <div class="tour-header mono">
-        <span class="tour-badge">${step.stepNumber}</span>
-        <span class="tour-step-title">${step.title}</span>
+        <span class="tour-badge">FIELD GUIDE / ${step.stepNumber}</span>
+        <span class="tour-step-title">ZPS / SYSTEM WALKTHROUGH</span>
         <button class="tour-close-btn" type="button" aria-label="Close tour">×</button>
+      </div>
+      <div class="tour-heading">
+        <span class="tour-overline mono">HOW IT WORKS / ${String(this.currentStepIndex + 1).padStart(2, "0")}</span>
+        <h2>${step.title}</h2>
       </div>
       <div class="tour-body">
         <p class="tour-description">${step.description}</p>
@@ -157,6 +171,7 @@ export class ProductTour {
             : ""
         }
       </div>
+      <div class="tour-track" aria-hidden="true"><span style="width:${((this.currentStepIndex + 1) / this.steps.length) * 100}%"></span></div>
       <div class="tour-footer">
         <div class="tour-dots" aria-hidden="true">
           ${this.steps
@@ -173,7 +188,7 @@ export class ProductTour {
             isFirst ? "disabled" : ""
           }>← PREV</button>
           <button class="tour-nav-btn next-btn mono" type="button">
-            ${isLast ? "FINISH TOUR ✓" : "NEXT →"}
+            ${isLast ? "FINISH TOUR ↗" : "NEXT →"}
           </button>
         </div>
       </div>
