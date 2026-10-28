@@ -966,6 +966,10 @@ textarea { min-height: 82px; padding: 13px; resize: vertical; overflow-wrap: any
   .real-config .merchant-unlock-panel { padding: 14px; }
   .checkout-standalone-header #app-tour-btn { min-height: 42px; }
 }
+@media (max-width: 620px) {
+  /* The global header badge styling must not override the compact mobile header. */
+  .checkout-standalone-header .network-badge { display: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   #wallet-connection-status[data-phase="opening"]::before { animation: none; }
 }
