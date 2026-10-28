@@ -24,7 +24,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     stepNumber: "03 / 06",
     title: "Prepare the merchant wallet",
-    targetId: "real-config",
+    targetId: "control-title",
     description: "Only the merchant connects a view-only testnet wallet. Customers never need a viewing key. Returning merchants can unlock an encrypted local profile.",
     highlightText: "VIEW-ONLY / NO SPENDING KEYS"
   },
