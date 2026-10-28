@@ -103,6 +103,14 @@ transactional ledger when crediting across devices.
 
 ## Release record
 
-This branch must record its final commit, CI run, deployment URL, and exact remaining limitations
-here before it is proposed for merge. Until then, the stable `main` release and historical proof
-remain unchanged.
+- Release-candidate commit: `8b7f789` (`fix(core): harden payment observation recovery`).
+- Local validation: 16 test files / 95 tests, typecheck, SDK build, consumer smoke,
+  reproducibility, demo typecheck/build, dependency audit, gateway checks, simulation browser
+  acceptance, responsive checks, and read-only real testnet browser synchronization all passed on
+  2026-10-28. The real testnet smoke observed canonical tip `4549174` and did not send funds.
+- CI: not run from this unpushed local branch.
+- Deployment: not performed. Stable `main` and the historical proof remain unchanged.
+- Merge/submission: not performed; requires review and CI from the branch first.
+- Remaining release limitations: a newly funded public-checkout payment is not newly verified;
+  cross-device settlement requires a shared transactional ledger; arbitrary HTTPS endpoints remain
+  transport inputs rather than trust oracles.
