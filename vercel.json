@@ -1,0 +1,38 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "ignoreCommand": "test \"$VERCEL_GIT_COMMIT_REF\" != \"vercel-static\"",
+  "rewrites": [
+    {
+      "source": "/webzjs-wallet/",
+      "destination": "/webzjs-wallet/webzjs_wallet.js"
+    },
+    {
+      "source": "/webzjs-wallet",
+      "destination": "/webzjs-wallet/webzjs_wallet.js"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "require-corp"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https:; worker-src 'self' blob:; child-src 'self' blob:"
+        }
+      ]
+    }
+  ]
+}

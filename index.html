@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f0eee7" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Zcash Payment Sessions / ZPS — A request isn't a receipt." />
+  <meta property="og:description" content="Exact, persistent payment sessions for shielded Zcash transactions. Built on ZIP-321 and WebZjs." />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <meta name="description" content="An exact, persistent lifecycle for shielded Zcash payments. ZIP-321 requests, confirmations, replay protection, and a verified testnet proof." />
+  <title>Zcash Payment Sessions / ZPS — A request isn't a receipt.</title>
+    <script type="module" crossorigin src="/assets/main-SVDOkIFq.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/style-Bf34rpaY.js">
+    <link rel="stylesheet" crossorigin href="/assets/style-4odsp3p1.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <div class="site-shell">
+      <header class="site-header" id="top">
+        <a class="brand" href="#top" aria-label="ZPS · back to top">
+          <span class="brand-symbol" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span>ZPS</span>
+        </a>
+        <nav class="site-nav" aria-label="Primary navigation">
+          <a href="#system">The problem</a>
+          <a href="#architecture">Architecture</a>
+          <a href="#evidence">Live proof</a>
+          <a href="#developer">For builders</a>
+        </nav>
+        <a class="nav-action" href="./checkout.html">Launch App <span aria-hidden="true">↗</span></a>
+      </header>
+
+      <main id="content">
+        <section class="hero section-wrap" aria-labelledby="hero-title">
+          <div class="hero-meta mono">
+            <span>ZCASH PAYMENT SESSIONS / SHIELDED INFRASTRUCTURE</span>
+            <span>CORE &amp; TOOLING TRACK</span>
+          </div>
+          <div class="hero-heading">
+            <h1 id="hero-title">A request<br />isn't a <em>receipt.</em></h1>
+            <div class="hero-aside">
+              <span class="tiny-index mono">ZEC / ZIP-321</span>
+              <p>Payment requests are easy to create. Knowing the <i>right</i> payment arrived is harder.</p>
+              <div style="display:flex;flex-direction:column;gap:14px;align-items:flex-start;">
+                <a class="nav-action" href="./checkout.html" style="font-size:13px;padding:14px 22px;">Launch Checkout App <span aria-hidden="true">↗</span></a>
+                <a class="text-link" href="#system">Explore Architecture &amp; Proof <span aria-hidden="true">↓</span></a>
+              </div>
+            </div>
+          </div>
+          <div class="hero-art" aria-label="Illustration of a Zcash payment request becoming a confirmed receipt">
+            <span class="art-gridline art-gridline-a" aria-hidden="true"></span>
+            <span class="art-gridline art-gridline-b" aria-hidden="true"></span>
+            <div class="art-stamp mono"><span>THE MISSING LAYER</span><strong>REQUEST<br />→ RECEIPT</strong><span>NO DOUBLE CREDIT</span></div>
+            <div class="art-sheet art-sheet-back" aria-hidden="true"><span>ZIP / 321</span><b>01</b><small>PAYMENT REQUEST</small></div>
+            <div class="art-sheet art-sheet-mid" aria-hidden="true"><span class="sheet-track">• • • • • • • • • • • •</span><strong>Z</strong><small>EXACT BY DESIGN</small></div>
+            <div class="art-sheet art-sheet-front" aria-hidden="true">
+              <div class="sheet-top mono"><span>SESSION / 0001</span><span>TESTNET</span></div>
+              <div class="sheet-code">0.0001<span>ZEC</span></div>
+              <div class="sheet-rule"></div>
+              <div class="sheet-row mono"><span>AMOUNT</span><b>MATCH</b></div>
+              <div class="sheet-row mono"><span>MEMO</span><b>MATCH</b></div>
+              <div class="sheet-row mono"><span>OUTPUT</span><b>MATCH</b></div>
+              <div class="sheet-confirm"><span aria-hidden="true">✓</span><b>PAID</b><small>CONFIRMED / EXACT</small></div>
+            </div>
+            <span class="art-orbit" aria-hidden="true">↗</span>
+            <span class="art-index mono">DESIGNED FOR ZCASH / BUILT FOR BROWSERS</span>
+          </div>
+          <div class="hero-bottom mono"><span>ONE PAYMENT. ONE SESSION. ONE RECEIPT.</span><span>SCROLL TO EXPLORE ↓</span></div>
+        </section>
+
+        <section class="statement" id="system" aria-labelledby="statement-title">
+        <div class="section-wrap statement-inner">
+          <div class="section-rail mono"><span>02 / THE PROBLEM</span><span>NO GUESSWORK</span></div>
+          <h2 id="statement-title">A payment URI<br />is only the <span>beginning.</span></h2>
+          <div class="statement-footer">
+            <span class="giant-asterisk" aria-hidden="true">✳</span>
+            <p>ZIP-321 tells a wallet what to pay. Your application still needs to verify amount, memo, confirmations, expiry and whether a payment was already used. <strong>ZPS handles that entire lifecycle.</strong></p>
+          </div>
+        </div>
+      </section>
+        <section class="lifecycles section-wrap" id="architecture" aria-labelledby="lifecycle-title">
+        <div class="section-rail mono"><span>03 / THE MECHANISM</span><span>DETERMINISTIC STATE</span></div>
+        <div class="section-topline">
+          <h2 id="lifecycle-title">From intent<br />to <em>certainty.</em></h2>
+          <p>A precise state machine around every shielded payment. Nothing moves to paid until the evidence does.</p>
+        </div>
+        <div class="step-grid">
+          <article class="step">
+            <span class="step-top mono">01 <span>REQUESTED</span></span>
+            <strong>Awaiting<br />payment<span class="step-arrow">↗</span></strong>
+            <p>A ZIP-321 request binds the exact amount, recipient, memo and expiry to a durable session.</p>
+          </article>
+          <article class="step">
+            <span class="step-top mono">02 <span>OBSERVED</span></span>
+            <strong>Detected<span class="step-arrow">↗</span></strong>
+            <p>A wallet output is matched using amount, private memo and its unique chain identity.</p>
+          </article>
+          <article class="step">
+            <span class="step-top mono">03 <span>SETTLING</span></span>
+            <strong>Confirming<span class="step-arrow">↗</span></strong>
+            <p>Confirmations accumulate. Chain reorganizations remain explicit, never silently ignored.</p>
+          </article>
+          <article class="step step-featured">
+            <span class="step-top mono">04 <span>VERIFIED</span></span>
+            <strong>Paid<span class="step-arrow">✓</span></strong>
+            <p>Once the threshold is met, that exact payment is consumed and cannot credit another session.</p>
+          </article>
+        </div>
+        <div class="invariants">
+          <div class="invariants-label mono">THE RULES / NOT PROMISES</div>
+          <div class="invariant"><b>01</b><span>Exact amount + memo</span><span>NO PARTIAL CREDIT</span></div>
+          <div class="invariant"><b>02</b><span>Transaction / pool / output</span><span>UNIQUE IDENTITY</span></div>
+          <div class="invariant"><b>03</b><span>Expiry + reorg protection</span><span>FAIL CLOSED</span></div>
+          <div class="invariant"><b>04</b><span>Consumed payment ledger</span><span>NO REPLAY</span></div>
+        </div>
+      </section>
+        <section class="proof" id="evidence" aria-labelledby="proof-title">
+        <div class="section-wrap">
+          <div class="section-rail mono"><span>04 / ACTUAL CHAIN EVIDENCE</span><span>ZCASH TESTNET · 11 OCT 2026</span></div>
+          <div class="proof-main">
+            <div class="proof-left">
+              <div class="proof-kicker"><span class="proof-kicker-dot"></span> VERIFIED HISTORICAL TESTNET PAYMENT</div>
+              <h2 id="proof-title">Proof,<br /><em>not a pitch.</em></h2>
+              <p>We submitted a real shielded transaction and watched the public SDK move from awaiting payment all the way to paid. No manual state changes.</p>
+              <a class="round-link" href="https://github.com/Iniwura/zcash-payment-sessions/blob/main/LIVE_TESTNET_PROOF.md" target="_blank" rel="noopener noreferrer">Examine the full proof <span aria-hidden="true">↗</span></a>
+            </div>
+            <div class="proof-right">
+              <div class="proof-big">90<span>CONFIRMATIONS<br />AT OBSERVATION</span></div>
+              <div class="proof-rows mono">
+                <div><span>VALUE</span><b>10,000 ZATOSHIS</b></div>
+                <div><span>MINED HEIGHT</span><b>4,490,144</b></div>
+                <div><span>SHIELDED POOL</span><b>SAPLING / OUTPUT 0</b></div>
+                <div><span>FINAL STATUS</span><b class="status-positive">PAID ✓</b></div>
+              </div>
+            </div>
+          </div>
+          <div class="proof-hash mono"><span>CANONICAL TXID</span><code>81c9ae83cede34ca8b47cac1f60c7327651173fdf2c97a1af908561b126c7cfc</code><a href="https://github.com/Iniwura/zcash-payment-sessions/blob/main/LIVE_TESTNET_PROOF.md" target="_blank" rel="noopener noreferrer">READ THE PROOF ↗</a></div>
+        </div>
+      </section>
+        <section class="developer" id="developer" aria-labelledby="developer-title">
+        <div class="section-wrap">
+          <div class="section-rail mono"><span>05 / FOR BUILDERS</span><span>THE PUBLIC SDK</span></div>
+          <div class="developer-grid">
+            <div>
+              <h2 id="developer-title">Small API.<br /><em>Serious rules.</em></h2>
+              <p>Use the public SDK. Your app supplies storage and a wallet adapter. ZPS handles the payment session, evidence and state progression.</p>
+              <a class="text-link" href="https://github.com/Iniwura/zcash-payment-sessions" target="_blank" rel="noopener noreferrer">Inspect the source <span aria-hidden="true">↗</span></a>
+            </div>
+            <div class="code-panel"><div class="code-header mono"><span><i class="code-dot"></i> QUICK START / TYPESCRIPT</span><span>INDEX.TS</span></div><pre aria-label="ZPS integration code"><code><span class="code-comment">// 01 / Initialize</span>
+<span class="code-purple">const</span> sdk = <span class="code-purple">await</span> ZcashPaymentSessions
+  .<span class="code-green">create</span>({ storage, wallet,
+    recipientAddress, accountId });
+
+<span class="code-comment">// 02 / Create request</span>
+<span class="code-purple">const</span> session = <span class="code-purple">await</span> sdk
+  .<span class="code-green">createSession</span>({
+    amountZatoshis: <span class="code-yellow">10_000n</span>,
+    memo: <span class="code-yellow">"order-123"</span>
+  });
+
+<span class="code-comment">// 03 / Verify evidence</span>
+<span class="code-purple">const</span> result = <span class="code-purple">await</span> sdk
+  .<span class="code-green">refresh</span>(session.id);</code></pre><div class="code-footer mono"><span>REAL SDK METHODS. NO MOCK API.</span><span>↗</span></div></div>
+          </div>
+          <div class="developer-footer"><span>SHIELDED INFRASTRUCTURE<br />FOR THE OPEN WEB.</span><span>ZIP-321 / WEBZJS / ZCASH</span></div>
+        </div>
+      </section>
+
+        <section class="final-cta section-wrap">
+          <p class="eyebrow mono">BUILD WITH EVIDENCE, NOT ASSUMPTIONS</p>
+          <h2>The payment<br /><em>is the proof.</em></h2>
+          <div>
+            <a href="./checkout.html" class="big-cta">Launch Checkout App <span aria-hidden="true">↗</span></a>
+            <a href="https://github.com/Iniwura/zcash-payment-sessions/blob/main/docs/THREAT_MODEL.md" target="_blank" rel="noopener noreferrer" class="text-link">Read the threat model ↗</a>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer"><div class="footer-top mono"><span>© ZPS / 2026</span><span>BUILT ON ZIP-321 + WEBZJS</span><a href="#top">BACK TO TOP ↑</a></div><div class="footer-mark" aria-label="ZPS">ZPS<span>↗</span></div><div class="footer-bottom"><p>Exact payments.<br />No double credit.</p><div><a href="https://github.com/Iniwura/zcash-payment-sessions" target="_blank" rel="noopener noreferrer">SOURCE ↗</a><a href="https://github.com/Iniwura/zcash-payment-sessions/blob/main/LIVE_TESTNET_PROOF.md" target="_blank" rel="noopener noreferrer">PROOF ↗</a></div></div></footer>
+    </div>
+  </body>
+</html>
