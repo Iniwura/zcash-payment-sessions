@@ -155,9 +155,13 @@ export class ProductTour {
 
     this.card.innerHTML = `
       <div class="tour-header mono">
-        <span class="tour-badge">${step.stepNumber}</span>
-        <span class="tour-step-title">${step.title}</span>
+        <span class="tour-badge">FIELD GUIDE / ${step.stepNumber}</span>
+        <span class="tour-step-title">ZPS / SYSTEM WALKTHROUGH</span>
         <button class="tour-close-btn" type="button" aria-label="Close tour">×</button>
+      </div>
+      <div class="tour-heading">
+        <span class="tour-overline mono">HOW IT WORKS / ${String(this.currentStepIndex + 1).padStart(2, "0")}</span>
+        <h2>${step.title}</h2>
       </div>
       <div class="tour-body">
         <p class="tour-description">${step.description}</p>
@@ -167,7 +171,8 @@ export class ProductTour {
             : ""
         }
       </div>
-      <div class="tour-track" aria-hidden="true"><span style="width:${((this.currentStepIndex + 1) / this.steps.length) * 100}%"></span></div>\n      <div class="tour-footer">
+      <div class="tour-track" aria-hidden="true"><span style="width:${((this.currentStepIndex + 1) / this.steps.length) * 100}%"></span></div>
+      <div class="tour-footer">
         <div class="tour-dots" aria-hidden="true">
           ${this.steps
             .map(
