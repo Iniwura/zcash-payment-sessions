@@ -13,7 +13,7 @@ Built for **ZECATHON 2026 · Core & Tooling**. The deliverable is the **SDK**; t
 | **Try the reference checkout** | **[Open ZPS on Vercel](https://zcash-payment-sessions.vercel.app/checkout)** |
 | **Evaluate in three minutes** | [Judge/reviewer walkthrough](docs/REVIEWER_GUIDE.md) |
 | **Inspect an actual paid testnet session** | [Recorded on-chain payment and SDK lifecycle](LIVE_TESTNET_PROOF.md) |
-| **Understand the trust boundaries** | [Threat model](docs/THREAT_MODEL.md) |
+| **Understand the trust boundaries** | [Threat model](docs/THREAT_MODEL.md) · [Documentation index](docs/INDEX.md) |
 | **Inspect the implementation** | [SDK source](src/index.ts) · [Reference app](examples/checkout/) · [Tests](tests/) |
 
 > **Evidence distinction:** A historical funded Zcash **testnet** transaction reached `PAID` through the real SDK (recorded October 11, 2026). The current Vercel checkout has also opened a real view-only testnet wallet, generated a ZIP-321 request, and synchronized against the testnet gateway in browser acceptance tests. **A separate newly funded payment through the current public Vercel checkout has not been demonstrated.** Developer simulation is clearly labeled and never presented as on-chain settlement.
