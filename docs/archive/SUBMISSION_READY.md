@@ -1,3 +1,5 @@
+> **Historical document — not current release guidance.** This file records an earlier 2026-10-28 checkpoint, including then-open defects, branch states, and submission assumptions. Some findings have since been fixed and some statuses are obsolete. For the current project, use [README](../../README.md), [reviewer guide](../REVIEWER_GUIDE.md), [threat model](../THREAT_MODEL.md), and [funded testnet evidence](../../LIVE_TESTNET_PROOF.md). Preserve this document for auditability; do not use it as a release gate.
+
 # ZECATHON | Submission briefing
 **Project:** Zcash Payment Sessions (ZPS)
 **Track:** Core & Tooling

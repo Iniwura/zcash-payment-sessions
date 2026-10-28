@@ -1,79 +1,81 @@
-# Reviewer guide
+# ZPS — three-minute reviewer walkthrough
 
-This is a three-minute walkthrough for the reference checkout.
+**Project:** [Zcash Payment Sessions](../README.md) · **Track:** ZECATHON Core & Tooling · **Deliverable:** TypeScript SDK with a browser reference checkout
 
-## 0:00 — The problem
+**Judge the infrastructure first.** The checkout is an interactive illustration of the public SDK. It is not a hosted custodian, transaction sender, or newly funded live-settlement proof.
 
-ZIP-321 describes what a wallet should pay. It does not give a merchant an exact, persistent,
-replay-safe payment lifecycle. Zcash Payment Sessions (ZPS) adds that missing stateful layer.
+## The evaluation route
 
-## 0:20 — Choose your evaluation path
+| Time | Action | What it demonstrates |
+| --- | --- | --- |
+| 0:00–0:20 | Read the [problem and feature matrix](../README.md#the-problem) | ZIP-321 requests need a separate stateful settlement layer |
+| 0:20–1:10 | Open [the checkout](https://zcash-payment-sessions.vercel.app/checkout) and choose **Developer simulation** | Original ZIP-321 URI/QR, exact correlation, confirmed state and explicit simulation receipt |
+| 1:10–1:40 | Expand **Explore edge cases**; test ambiguous, expired, duplicate and reorg outcomes | Fail-closed behavior and safety properties |
+| 1:40–2:20 | Review [the historical funded testnet proof](../LIVE_TESTNET_PROOF.md) | A real on-chain output was matched, confirmed and protected from reuse |
+| 2:20–3:00 | Inspect [the public SDK](../src/index.ts), [monitor](../src/monitor.ts), [atomic storage contract](../src/storage.ts) and [tests](../tests/) | Evidence of reusable implementation rather than UI-only functionality |
 
-The reference checkout provides two complementary modes:
+### Fast path: developer simulation
 
-### Path A: 30-second Developer Simulation (No wallet or funds required)
-If you do not have a testnet UFVK or testnet coins, switch the mode toggle to **Developer simulation**:
-1. Click **Walk through a complete payment ↗** in Developer simulation mode.
-2. The public SDK immediately generates a valid ZIP-321 request and renders the QR code.
-3. The simulator steps through:
-   ```text
-   AWAITING_PAYMENT -> DETECTED -> CONFIRMING -> PAID
-   ```
-4. Verify reload safety: Refresh your browser tab ($F5$). The session stays **PAID** with exact confirmation count restored from persistent storage.
-5. Explore edge cases: Expand **Explore edge cases** to test an on-chain **Reorg**, **Ambiguous match**, or **Duplicate credit prevention**.
+1. Open **[the reference checkout](https://zcash-payment-sessions.vercel.app/checkout)**.
+2. Select **Developer simulation**. This is intentionally separate from the real testnet path.
+3. Choose an example order or keep the prefilled amount and memo. Select **Run the guided simulation**.
+4. Observe the *actual SDK states* `AWAITING_PAYMENT → DETECTED → CONFIRMING → PAID` from **synthetic wallet observations**. Inspect the rendered ZIP-321 payment URI, QR, session ID and clearly labeled *simulation* receipt.
+5. Examine the exception states, duplicate consumption behavior and page-reload persistence.
 
-### Path B: Real Zcash Testnet (View-only observation)
-When opened in a cross-origin isolated environment (such as the Vercel production deployment), the checkout defaults to **Real testnet**:
-1. The verified public gRPC-Web gateway (`https://zps-testnet-gateway.onrender.com`) is pre-filled.
-2. Enter a testnet Unified Full Viewing Key (UFVK) and an account birthday height.
-   *(Note: The checkout accepts only view-only keys; spending keys and seed phrases are strictly forbidden and never accepted).*
-3. Click **Open view-only wallet ↗**. The browser initializes WebZjs in an isolated WASM worker thread and attaches the local current-consensus Sapling memo hydrator.
-4. Create a payment request. If an external testnet sender pays it, refresh to observe the exact amount and memo matched to chain evidence; a new funded browser checkout payment has not yet been validated.
+**No money is sent in this path.** Synthetic `PAID` means the matcher accepted synthetic exact evidence; it is **not** an observed on-chain transaction.
 
-## 1:15 — Exact binding & replay protection
+### Real testnet path: view-only
 
-The payment monitor does not rely on transaction hashes alone. It binds to the composite identity:
-```text
-txid + pool + output_index
+On the cross-origin-isolated **Vercel** checkout:
+
+1. Select **Real testnet**.
+2. Obtain a dedicated Zcash testnet **Unified Full Viewing Key (UFVK)** from a compatible existing testnet wallet, together with its **wallet birthday block height**.
+3. Enter those values under **Connect an existing testnet wallet**. The free gRPC-Web gateway is already configured under optional connection settings. Never supply a seed, mnemonic or spending key.
+4. Optionally encrypt and locally save the viewing profile with a separate passphrase. Unlocking it in a returning browser session may require another scan.
+5. Connect the wallet; once ready, create a session and inspect the real ZIP-321 URI/QR.
+6. Use **Refresh payment status** to synchronize/view actual testnet observations. A funded **external sender** would be needed to demonstrate a new real checkout payment.
+
+The available browser CI verifies opening a view-only wallet, creating a real request, testnet sync and encrypted merchant-profile reload. **No newly funded end-to-end payment has been proven on the current production checkout.** Avoid describing a generated QR or successful sync as `PAID`.
+
+**Environmental requirement:** Real wallet mode needs COOP/COEP, `SharedArrayBuffer`, compatible WASM workers and browser isolation. The GitHub Pages mirror is a **simulation-only** fallback.
+
+## The strongest independent settlement proof
+
+Read [`LIVE_TESTNET_PROOF.md`](../LIVE_TESTNET_PROOF.md), which records a **funded October 11, 2026 testnet payment** independently of the simulation.
+
+| Check | Recorded result |
+| --- | --- |
+| Canonical transaction ID | `81c9ae83cede34ca8b47cac1f60c7327651173fdf2c97a1af908561b126c7cfc` |
+| Block / Sapling output | `4,490,144` / output `0` |
+| Exact amount | `10,000` zatoshis |
+| Observed confirmation count | `90` |
+| Matching memo | Recovered locally from full V6 transaction bytes using the isolated Rust/WASM Sapling hydrator |
+| Verified lifecycle | `AWAITING_PAYMENT → DETECTED → CONFIRMING → PAID` |
+| Reload / replay | Session remained `PAID` after restore; another session returned `ALREADY_CONSUMED` |
+
+## What judges should inspect in code
+
+- [`src/index.ts`](../src/index.ts) — compact public SDK, create/refresh/get session.
+- [`src/monitor.ts`](../src/monitor.ts) — exact correlation, consumed ledger, confirmations, anomalies and reorg recovery.
+- [`src/storage.ts`](../src/storage.ts) — optional atomic `claimItem` required for crediting. Without it the SDK returns `CONCURRENCY_UNSUPPORTED`.
+- [`src/wallet.ts`](../src/wallet.ts) and [`src/browser-wallet.ts`](../src/browser-wallet.ts) — received output adapter and view-only browser wallet.
+- [`src/memo-hydration.ts`](../src/memo-hydration.ts) and [`wasm/sapling-memo-hydrator`](../wasm/sapling-memo-hydrator/) — current-consensus Sapling memo compatibility with identity checks.
+- [`tests/remediation.test.ts`](../tests/remediation.test.ts) and [`tests/monitor.test.ts`](../tests/monitor.test.ts) — adversarial and matching coverage.
+- [`docs/THREAT_MODEL.md`](THREAT_MODEL.md) — verified protections, unverified assumptions and privacy trade-offs.
+
+## Reproduce and verify
+
+After the pinned WebZjs and Sapling dependencies are built (see [README setup](../README.md#reproducible-setup)):
+
+```sh
+npm run typecheck
+npm test
+npm run test:consumer
+npm run verify:reproducibility
+npm run demo:typecheck
+npm run demo:build
 ```
-Once an output is credited, it is recorded in the **consumed-payment ledger**. The same output cannot satisfy two sessions or be credited twice.
 
-## 1:45 — Verified on-chain proof
+Review the [GitHub Actions runs](https://github.com/Iniwura/zcash-payment-sessions/actions) for fresh browser and build checks on the evaluated commit. The [free gateway](../gateway/README.md) can cold-start, and the merchant must keep its view-only observer active for manual refresh. Cross-device settlement requires a shared atomic ledger, not browser local storage.
 
-Open [LIVE_TESTNET_PROOF.md](../LIVE_TESTNET_PROOF.md) to inspect the recorded historical testnet payment:
-- **Canonical transaction ID:** `81c9ae83cede34ca8b47cac1f60c7327651173fdf2c97a1af908561b126c7cfc`
-- **Output index / Pool:** Sapling output `0` (`10,000` zatoshis)
-- **Mined height:** `4490144` (90 confirmations at recorded observation)
-- **Exact memo recovered:** Local trial decryption via current-consensus WASM hydrator.
-
-## 2:30 — Public SDK integration
-
-The public surface is concise and modular:
-```ts
-import { ZcashPaymentSessions } from "zcash-payment-sessions";
-
-const sdk = await ZcashPaymentSessions.create({
-  storage: paymentStorage,
-  recipientAddress: "ztestsapling1...",
-  wallet: browserWallet,
-  accountId: 1,
-  requiredConfirmations: 2
-});
-
-const session = await sdk.createSession({
-  amountZatoshis: 10_000n,
-  memo: "order-123",
-  expiresInMs: 2 * 60 * 60 * 1000
-});
-
-const result = await sdk.refresh(session.id);
-```
-
-For a real payment observer, `paymentStorage` must provide an atomic `claimItem(key, owner)`
-operation. The reference browser checkout implements this with same-origin Web Locks. A plain
-`localStorage` object can persist sessions but is intentionally refused for payment crediting with
-`CONCURRENCY_UNSUPPORTED`; multi-device or server deployments need a shared transactional ledger.
-
-## 2:50 — Security & boundaries
-
-Read the [threat model](THREAT_MODEL.md) for full details on client-side isolation, UFVK handling, and public transport boundaries.
+**Evaluation principle:** Treat correctness and evidence as the core of the submission. The UI makes the SDK inspectable, but simulation, historical on-chain settlement and live testnet **observation** are three different kinds of evidence.
