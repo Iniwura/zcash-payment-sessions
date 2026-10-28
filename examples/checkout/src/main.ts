@@ -547,7 +547,7 @@ async function openTestnetWallet(viewingKeyOverride?: string): Promise<void> {
     if (epoch === walletConnectionEpoch) {
       openingTestnetWallet = false;
       elements.openTestnet.disabled = false;
-      elements.openTestnet.textContent = "Open view-only wallet ↗";
+      elements.openTestnet.textContent = "03 / Connect view-only wallet ↗";
       elements.setupPassphrase.value = "";
       render();
       renderMerchantOnboarding();
