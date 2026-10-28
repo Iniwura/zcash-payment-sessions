@@ -312,6 +312,10 @@ async function initialize(): Promise<void> {
     runtime = undefined;
     elements.walletConnectionStatus.textContent =
       "Connect a view-only TESTNET wallet to create a real shielded payment request.";
+    // Production static delivery of the wallet WASM is large. Begin the
+    // isolated WebZjs worker startup while the merchant reads onboarding;
+    // failures remain retryable through the explicit open action.
+    void WebZjsBrowserWallet.prewarm().catch(() => undefined);
   }
   bindEvents();
   render();
