@@ -103,7 +103,9 @@ transactional ledger when crediting across devices.
 
 ## Release record
 
-- Release-candidate commit: `8b7f789` (`fix(core): harden payment observation recovery`).
+- Release-candidate commits: `8b7f789` (`fix(core): harden payment observation recovery`),
+  `aa0c9f7` (`docs: record remediation release candidate evidence`), and `1cc44c6`
+  (`test: normalize remediation fixture`).
 - Local validation: 16 test files / 95 tests, typecheck, SDK build, consumer smoke,
   reproducibility, demo typecheck/build, dependency audit, gateway checks, simulation browser
   acceptance, responsive checks, and read-only real testnet browser synchronization all passed on
