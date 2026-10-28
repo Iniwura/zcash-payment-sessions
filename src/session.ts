@@ -33,8 +33,8 @@ const ALLOWED_TRANSITIONS: Record<
   CONFIRMING: ["PAID", "REORGED", "EXPIRED"],
   PAID: ["REORGED"],
   EXPIRED: [],
-  REORGED: ["DETECTED", "CONFIRMING"],
-  AMBIGUOUS: []
+  REORGED: ["DETECTED", "CONFIRMING", "EXPIRED"],
+  AMBIGUOUS: ["EXPIRED"]
 };
 
 export function createPaymentSession(

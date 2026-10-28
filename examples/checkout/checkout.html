@@ -9,8 +9,7 @@
   <meta property="og:description" content="Exact, persistent payment sessions for shielded Zcash transactions. Built on ZIP-321 and WebZjs." />
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <meta name="description" content="An exact, persistent lifecycle for shielded Zcash payments. ZIP-321 requests, confirmations, replay protection, and a verified testnet proof." />
-  <title>Zcash Payment Sessions / ZPS — A request isn't a receipt.</title>
-    <title>ZPS / Reference Checkout Application</title>
+  <title>ZPS / Reference Checkout Application</title>
   </head>
   <body>
     <a class="skip-link" href="#content">Skip to content</a>
@@ -31,6 +30,7 @@
     </header>
 
     <main id="content" class="checkout-standalone-wrap">
+      <h1 class="sr-only">Zcash Payment Sessions reference checkout</h1>
       <!-- STOREFRONT SIMULATOR CONSOLE -->
       <section class="storefront" id="app-storefront" style="padding-top:10px;padding-bottom:36px;border-top:0;" aria-labelledby="storefront-title">
         <div class="section-rail mono" style="margin-bottom:20px;">
@@ -226,9 +226,6 @@
       </div>
     </footer>
 
-    <script type="importmap">
-      {"imports":{"@chainsafe/webzjs-wallet":"./webzjs-wallet/webzjs_wallet.js"}}
-    </script>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

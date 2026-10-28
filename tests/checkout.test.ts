@@ -38,6 +38,13 @@ class MemoryStorage implements KeyValueStorage {
   removeItem(key: string): void {
     this.values.delete(key);
   }
+
+  claimItem(key: string, owner: string): string | null {
+    const existing = this.values.get(key);
+    if (existing !== undefined) return existing;
+    this.values.set(key, owner);
+    return null;
+  }
 }
 
 let wasm: Uint8Array;

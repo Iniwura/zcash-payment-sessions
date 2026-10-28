@@ -14,6 +14,10 @@ import {
 } from "./session.js";
 import {
   PaymentMonitor,
+  type PaymentObservationBatch,
+  type PaymentObservationIssue,
+  type PaymentObservationIssueKind,
+  type PaymentObservationInput,
   type PaymentObservationResult
 } from "./monitor.js";
 import {
@@ -161,8 +165,8 @@ export class ZcashPaymentSessions {
       );
     }
 
-    const observations = await this.paymentSource.list();
-    const observation = this.monitor.observe(id, observations);
+    const observations = await this.paymentSource.listDetailed();
+    const observation = await this.monitor.observe(id, observations);
 
     return {
       session: this.getSession(id),
@@ -179,6 +183,10 @@ export type {
   KeyValueStorage,
   HydratedReceivedPaymentEvidence,
   PaymentObservationResult,
+  PaymentObservationBatch,
+  PaymentObservationIssue,
+  PaymentObservationIssueKind,
+  PaymentObservationInput,
   WebZjsReceivedPayment,
   WebZjsReceivedPaymentResponse,
   WebZjsPaymentHydrator,

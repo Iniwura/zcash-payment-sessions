@@ -13,6 +13,7 @@ export interface WebZjsBrowserWalletOptions {
   lightwalletdUrl: string;
   storage: KeyValueStorage;
   storageKey?: string;
+  accountId?: number;
   minConfirmationsTrusted?: number;
   minConfirmationsUntrusted?: number;
   threadCount?: number;
@@ -51,6 +52,7 @@ let webzjsInitialization: Promise<WebZjsWalletModule> | undefined;
 
 export class WebZjsBrowserWallet implements WebZjsWalletLike {
   private readonly storageKey: string;
+  private readonly accountIdStorageKey: string;
   private accountId: number | undefined;
   private disposed = false;
   private currentState: BrowserWalletState;
@@ -62,6 +64,11 @@ export class WebZjsBrowserWallet implements WebZjsWalletLike {
     this.storageKey =
       options.storageKey ??
       `zcash-webzjs-wallet:${options.network}:db`;
+    this.accountIdStorageKey = `${this.storageKey}:account-id`;
+    this.accountId = options.accountId ?? readAccountId(
+      options.storage,
+      this.accountIdStorageKey
+    );
     this.currentState = {
       network: options.network,
       syncStatus: "idle",
@@ -182,8 +189,17 @@ export class WebZjsBrowserWallet implements WebZjsWalletLike {
         input.birthdayHeight
       );
       this.accountId = accountId;
+      this.persistAccountId();
       await this.persist();
-      await this.refreshState();
+      const summaryReady = await this.refreshState();
+      if (!summaryReady) {
+        this.currentState = {
+          ...this.currentState,
+          syncStatus: "idle",
+          accountId,
+          error: "WebZjs wallet summary is unavailable until sync"
+        };
+      }
       return accountId;
     } catch {
       throw new WebZjsBrowserWalletError(
@@ -204,7 +220,12 @@ export class WebZjsBrowserWallet implements WebZjsWalletLike {
     try {
       await this.wallet.sync();
       await this.persist();
-      await this.refreshState();
+      if (!(await this.refreshState())) {
+        throw new WebZjsBrowserWalletError(
+          "SYNC_FAILED",
+          "WebZjs wallet summary refresh failed"
+        );
+      }
       this.currentState = {
         ...this.currentState,
         syncStatus: "synced"
@@ -247,17 +268,27 @@ export class WebZjsBrowserWallet implements WebZjsWalletLike {
     }
   }
 
-  private async refreshState(): Promise<void> {
+  private async refreshState(): Promise<boolean> {
     let summary;
 
     try {
       summary = await this.wallet.get_wallet_summary();
     } catch {
-      return;
+      this.currentState = {
+        ...this.currentState,
+        syncStatus: "error",
+        error: "WebZjs wallet summary is unavailable"
+      };
+      return false;
     }
 
     if (summary === undefined) {
-      return;
+      this.currentState = {
+        ...this.currentState,
+        syncStatus: "error",
+        error: "WebZjs wallet summary is unavailable"
+      };
+      return false;
     }
 
     try {
@@ -269,18 +300,45 @@ export class WebZjsBrowserWallet implements WebZjsWalletLike {
           typeof firstAccount[0] === "number"
         ) {
           this.accountId = firstAccount[0];
+          this.persistAccountId();
         }
+      }
+
+      if (
+        this.accountId !== undefined &&
+        Array.isArray(accountBalances) &&
+        !accountBalances.some(
+          (account) =>
+            Array.isArray(account) && account[0] === this.accountId
+        )
+      ) {
+        this.currentState = {
+          ...this.currentState,
+          syncStatus: "error",
+          error: "Configured WebZjs wallet account was not found"
+        };
+        return false;
       }
 
       this.currentState = {
         ...this.currentState,
+        error: undefined,
         accountId: this.accountId,
         chainTipHeight: summary.chain_tip_height,
         fullyScannedHeight: summary.fully_scanned_height
       };
+      return true;
     } finally {
       summary.free();
     }
+  }
+
+  private persistAccountId(): void {
+    if (this.accountId === undefined) return;
+    this.options.storage.setItem(
+      this.accountIdStorageKey,
+      String(this.accountId)
+    );
   }
 
   private assertOpen(): void {
@@ -319,10 +377,24 @@ async function initializeWebZjs(
 }
 
 function validateOptions(options: WebZjsBrowserWalletOptions): void {
-  if (options.lightwalletdUrl.trim().length === 0) {
+  let endpoint: URL;
+  try {
+    endpoint = new URL(options.lightwalletdUrl);
+  } catch {
     throw new WebZjsBrowserWalletError(
       "INVALID_OPTIONS",
-      "A gRPC-web lightwalletd URL is required"
+      "A valid HTTPS gRPC-web lightwalletd URL is required"
+    );
+  }
+
+  const localEndpoint =
+    endpoint.hostname === "localhost" ||
+    endpoint.hostname === "127.0.0.1" ||
+    endpoint.hostname === "[::1]";
+  if (endpoint.protocol !== "https:" && !(localEndpoint && endpoint.protocol === "http:")) {
+    throw new WebZjsBrowserWalletError(
+      "INVALID_OPTIONS",
+      "A gRPC-web endpoint must use HTTPS (HTTP is allowed only for localhost)"
     );
   }
 
@@ -332,6 +404,26 @@ function validateOptions(options: WebZjsBrowserWalletOptions): void {
       "WebZjs network must be main or test"
     );
   }
+
+  if (
+    options.accountId !== undefined &&
+    (!Number.isSafeInteger(options.accountId) || options.accountId < 0)
+  ) {
+    throw new WebZjsBrowserWalletError(
+      "INVALID_OPTIONS",
+      "WebZjs account id must be a non-negative integer"
+    );
+  }
+}
+
+function readAccountId(
+  storage: KeyValueStorage,
+  key: string
+): number | undefined {
+  const value = storage.getItem(key);
+  if (value === null || !/^\d+$/.test(value)) return undefined;
+  const accountId = Number(value);
+  return Number.isSafeInteger(accountId) ? accountId : undefined;
 }
 
 function defaultThreadCount(): number {

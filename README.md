@@ -25,7 +25,7 @@ responsibilities; a WebZjs-compatible wallet adapter supplies received payments 
 import { ZcashPaymentSessions } from "zcash-payment-sessions";
 
 const sdk = await ZcashPaymentSessions.create({
-  storage: localStorage,
+  storage: paymentStorage,
   recipientAddress: "ztestsapling1...",
   wallet: webzjsWallet,
   accountId: 1,
@@ -42,6 +42,14 @@ console.log(session.paymentUri); // render as a QR or copyable ZIP-321 URI
 const result = await sdk.refresh(session.id);
 console.log(result.session?.status, result.observation.outcome);
 ```
+
+Payment matching is fail-closed unless `storage` implements the optional asynchronous
+`claimItem(key, owner)` operation. It must atomically claim a consumed-payment key and return the
+existing owner when another writer already claimed it. The reference checkout implements this with
+same-origin Web Locks; a server or multi-device deployment should use a shared transactional
+database. Plain `localStorage` remains suitable for session metadata and request URIs, but the SDK
+returns `CONCURRENCY_UNSUPPORTED` instead of crediting a payment when no atomic claim capability
+is available.
 
 The public surface also exports `WebZjsBrowserWallet`, `createSaplingMemoHydrator`,
 `decodeZip321Uri`, `proposeZip321Transfer`, and the public observation/session types.
@@ -219,7 +227,7 @@ The Vite dev and preview servers send `Cross-Origin-Opener-Policy: same-origin` 
 `Cross-Origin-Embedder-Policy: require-corp`. These headers are required for the generated WebZjs
 worker pool and `SharedArrayBuffer`; without them the browser wallet cannot initialize.
 
-The public checkout supports real testnet sync. An earlier transaction completed the payment lifecycle through the SDK, but the deployed browser has not been shown completing a newly funded checkout session. Real testnet observation requires a testnet viewing key, a verified endpoint, and a funded external sender.
+The public checkout supports real testnet sync. An earlier transaction completed the payment lifecycle through the SDK, but the deployed browser has not been shown completing a newly funded checkout session. Real testnet observation requires a testnet viewing key, a verified endpoint, and a funded external sender. The browser wallet adapter requires HTTPS endpoints except for localhost development, persists an explicit selected account id, and does not report successful sync when the wallet summary fails.
 
 ## License
 
@@ -243,4 +251,4 @@ Initial wallet setup requires a testnet UFVK so the memo hydrator can decrypt Sa
 
 The checkout supports a merchant-specific, **optional encrypted viewing profile**. The merchant connects a testnet Unified Full Viewing Key and birthday once. If they provide a separate passphrase (minimum 12 characters), the view-only key and gateway settings are encrypted locally with Web Crypto PBKDF2-SHA256 (310,000 iterations) and AES-256-GCM, then stored as ciphertext in that browser. On return, the merchant unlocks that locally encrypted profile with their passphrase; the WebZjs view-only wallet database lives in **volatile browser memory**, while payment-session metadata is stored separately. This prevents the serialized WebZjs database (which can contain viewing material) from being saved unencrypted in localStorage. Unlocking after a page reload recreates the wallet from the saved encrypted viewing key and birthday and may require rescanning blocks. No spending key, seed or mnemonic is accepted. Passphrase recovery is unavailable, and a compromised browser can still expose viewing data while unlocked. Older deployments may already have `wallet:testnet:db` in browser localStorage; users should remove that legacy item manually before treating their local storage as private.
 
-This is **not** a standard Zcash injected-wallet integration and not server-side monitoring. The customer only needs to scan or follow the ZIP-321 payment URI. The reference merchant tab must remain open for manual refresh and on-chain observations. A separate signed payment from an external testnet wallet remains necessary to establish new live checkout settlement.
+This is **not** a standard Zcash injected-wallet integration and not server-side monitoring. The customer only needs to scan or follow the ZIP-321 payment URI. The reference merchant tab must remain open for manual refresh and on-chain observations. A separate signed payment from an external testnet wallet remains necessary to establish new live checkout settlement. Cross-tab payment claims use Web Locks where available; stronger cross-device or server-side settlement requires a shared transactional ledger.

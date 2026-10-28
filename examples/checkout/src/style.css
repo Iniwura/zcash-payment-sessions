@@ -26,6 +26,7 @@ h1,h2,h3,p { margin-top: 0; }
 h1,h2,h3 { font-weight: 800; }
 .mono, .eyebrow, .section-rail, .tiny-index, .step-top, .proof-kicker, .proof-rows, .field-label, .network-badge, .mode-badge, .status-pill, .qr-label, .qr-footer, .expiry-row, .checkout-disclaimer, .details-grid dt, .code-header, .code-footer, .site-footer, .simulation-disclosure, .invariant b { font-family: var(--code); }
 .hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .skip-link { position: fixed; z-index: 1000; left: 12px; top: -100px; padding: 12px 18px; background: white; color: black; }
 .skip-link:focus { top: 12px; }
 .site-shell { overflow: clip; }

@@ -37,6 +37,13 @@ class MemoryStorage implements KeyValueStorage {
     this.values.delete(key);
   }
 
+  claimItem(key: string, owner: string): string | null {
+    const existing = this.values.get(key);
+    if (existing !== undefined) return existing;
+    this.values.set(key, owner);
+    return null;
+  }
+
   valuesText(): string {
     return [...this.values.entries()]
       .map(([key, value]) => `${key}=${value}`)
@@ -243,7 +250,7 @@ describe("current-consensus Sapling memo hydration", () => {
     });
     sessions.save(session);
 
-    expect(monitor.observe(session.id, await source.list()).outcome).toBe(
+    expect((await monitor.observe(session.id, await source.list())).outcome).toBe(
       "EXACT"
     );
     wallet.payments = [compactPayment({ confirmations: 1 })];
@@ -253,11 +260,11 @@ describe("current-consensus Sapling memo hydration", () => {
       { requiredConfirmations: 2 }
     );
     expect(
-      reloadedMonitor.observe(session.id, await source.list()).outcome
+      (await reloadedMonitor.observe(session.id, await source.list())).outcome
     ).toBe("EXACT");
     wallet.payments = [compactPayment({ confirmations: 2 })];
     expect(
-      reloadedMonitor.observe(session.id, await source.list()).outcome
+      (await reloadedMonitor.observe(session.id, await source.list())).outcome
     ).toBe("EXACT");
     expect(new PaymentSessionStore(storage).load(session.id)?.status).toBe(
       "PAID"
@@ -270,7 +277,7 @@ describe("current-consensus Sapling memo hydration", () => {
     });
     new PaymentSessionStore(storage).save(second);
     expect(
-      reloadedMonitor.observe(second.id, await source.list()).outcome
+      (await reloadedMonitor.observe(second.id, await source.list())).outcome
     ).toBe("ALREADY_CONSUMED");
   });
 });

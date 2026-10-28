@@ -2,6 +2,8 @@ name: Merchant viewing-profile security smoke
 on:
   push:
     branches: [feat/merchant-wallet-profile]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read

@@ -35,4 +35,29 @@ describe("WebZjs browser wallet adapter", () => {
       code: "INVALID_OPTIONS"
     });
   });
+
+  it("rejects non-localhost HTTP endpoints", async () => {
+    await expect(
+      WebZjsBrowserWallet.open({
+        network: "test",
+        lightwalletdUrl: "http://example.com/grpc-web",
+        storage
+      })
+    ).rejects.toMatchObject<WebZjsBrowserWalletError>({
+      code: "INVALID_OPTIONS"
+    });
+  });
+
+  it("rejects invalid explicit account ids before loading WASM", async () => {
+    await expect(
+      WebZjsBrowserWallet.open({
+        network: "test",
+        lightwalletdUrl: "https://example.invalid/grpc-web",
+        storage,
+        accountId: -1
+      })
+    ).rejects.toMatchObject<WebZjsBrowserWalletError>({
+      code: "INVALID_OPTIONS"
+    });
+  });
 });

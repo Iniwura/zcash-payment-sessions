@@ -53,7 +53,7 @@ The public surface is concise and modular:
 import { ZcashPaymentSessions } from "zcash-payment-sessions";
 
 const sdk = await ZcashPaymentSessions.create({
-  storage: localStorage,
+  storage: paymentStorage,
   recipientAddress: "ztestsapling1...",
   wallet: browserWallet,
   accountId: 1,
@@ -68,6 +68,11 @@ const session = await sdk.createSession({
 
 const result = await sdk.refresh(session.id);
 ```
+
+For a real payment observer, `paymentStorage` must provide an atomic `claimItem(key, owner)`
+operation. The reference browser checkout implements this with same-origin Web Locks. A plain
+`localStorage` object can persist sessions but is intentionally refused for payment crediting with
+`CONCURRENCY_UNSUPPORTED`; multi-device or server deployments need a shared transactional ledger.
 
 ## 2:50 — Security & boundaries
 

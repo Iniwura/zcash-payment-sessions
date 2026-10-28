@@ -134,19 +134,37 @@ let guidedRunActive = false;
 let openingTestnetWallet = false;
 let walletConnectionEpoch = 0;
 
-const sessionStorage: KeyValueStorage = {
-  getItem: (key) => window.localStorage.getItem(`checkout:${key}`),
-  setItem: (key, value) => window.localStorage.setItem(`checkout:${key}`, value),
-  removeItem: (key) => window.localStorage.removeItem(`checkout:${key}`)
-};
+function createBrowserSessionStorage(prefix: string): KeyValueStorage {
+  const fullKey = (key: string): string => `${prefix}${key}`;
+
+  return {
+    getItem: (key) => window.localStorage.getItem(fullKey(key)),
+    setItem: (key, value) => window.localStorage.setItem(fullKey(key), value),
+    removeItem: (key) => window.localStorage.removeItem(fullKey(key)),
+    claimItem: async (key, owner) => {
+      if (navigator.locks === undefined) {
+        throw new Error("This browser does not provide Web Locks for payment claims");
+      }
+
+      return navigator.locks.request(
+        `zcash-payment-claim:${fullKey(key)}`,
+        async () => {
+          const keyInStorage = fullKey(key);
+          const existing = window.localStorage.getItem(keyInStorage);
+          if (existing !== null) return existing;
+          window.localStorage.setItem(keyInStorage, owner);
+          return null;
+        }
+      );
+    }
+  };
+}
+
+const sessionStorage = createBrowserSessionStorage("checkout:");
 
 // Keep reviewer simulation state separate from real chain observation state.
 // A simulated checkout must never be restored into a view-only testnet wallet.
-const testnetSessionStorage: KeyValueStorage = {
-  getItem: (key) => window.localStorage.getItem(`checkout:testnet:${key}`),
-  setItem: (key, value) => window.localStorage.setItem(`checkout:testnet:${key}`, value),
-  removeItem: (key) => window.localStorage.removeItem(`checkout:testnet:${key}`)
-};
+const testnetSessionStorage = createBrowserSessionStorage("checkout:testnet:");
 
 // WebZjs serializes its wallet database, including view-only account records.
 // Never place those serialized bytes unencrypted in localStorage. Until encrypted

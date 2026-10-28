@@ -25,5 +25,20 @@ export function describeSessionException(
   if (observation?.outcome === "ALREADY_CONSUMED") {
     return `Payment already consumed by ${observation.consumedBySessionId ?? "another session"}.`;
   }
+  if (observation?.outcome === "TEMPORARILY_UNAVAILABLE") {
+    return "Chain evidence is temporarily unavailable. No payment state was changed; refresh to retry.";
+  }
+  if (observation?.outcome === "INCOMPLETE") {
+    return "Payment evidence is incomplete. No credit was applied; refresh after wallet metadata is available.";
+  }
+  if (observation?.outcome === "MISMATCH") {
+    return "The observed output does not match the previously recorded payment evidence. No credit was applied.";
+  }
+  if (observation?.outcome === "CONFLICTING") {
+    return "Conflicting observations were received. No credit was applied.";
+  }
+  if (observation?.outcome === "CONCURRENCY_UNSUPPORTED") {
+    return "This storage adapter cannot make payment claims atomically. No credit was applied.";
+  }
   return "";
 }
