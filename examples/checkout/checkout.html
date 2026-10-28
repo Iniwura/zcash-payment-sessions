@@ -148,27 +148,48 @@
                 <p id="real-mode-notice" class="compatibility-note hidden" role="status"></p>
                 <div id="real-config" class="real-config">
                   <div class="merchant-profile-header">
-                    <span class="eyebrow mono">MERCHANT WALLET / VIEW-ONLY SETUP</span>
-                    <strong>Set up once. Create payments anytime.</strong>
-                    <p>Customers only scan your payment QR. Only the merchant configures the receiving wallet.</p>
+                    <span class="eyebrow mono">MERCHANT SETUP / VIEW-ONLY TESTNET</span>
+                    <strong>Connect once. Accept requests.</strong>
+                    <p>Only the merchant connects a wallet. Customers simply scan the QR and pay from theirs.</p>
                   </div>
                   <div id="merchant-unlock-panel" class="merchant-unlock-panel hidden">
-                    <label class="field-label" for="merchant-unlock-passphrase">UNLOCK SAVED MERCHANT WALLET</label>
-                    <input id="merchant-unlock-passphrase" type="password" autocomplete="off" placeholder="Your merchant profile passphrase" />
-                    <button id="merchant-unlock" class="button button-primary full-width" type="button">Unlock merchant wallet ↗</button>
+                    <div class="merchant-step-marker mono">RETURNING MERCHANT / ENCRYPTED PROFILE</div>
+                    <label class="field-label" for="merchant-unlock-passphrase">YOUR PROFILE PASSPHRASE</label>
+                    <input id="merchant-unlock-passphrase" type="password" autocomplete="off" placeholder="Passphrase used when saving this wallet" />
+                    <button id="merchant-unlock" class="button button-primary full-width" type="button">Unlock saved wallet ↗</button>
+                    <p class="config-note">Your viewing key is encrypted in this browser. Unlocking can require a new chain scan. No spending key is stored.</p>
                     <button id="merchant-forget" class="button button-quiet" type="button">Remove saved unlock profile</button>
-                    <p class="config-note">The viewing key is locally encrypted with your passphrase. Never use a spending key.</p>
                   </div>
                   <details id="merchant-advanced" class="merchant-advanced" open>
-                    <summary>Set up or reconnect a view-only wallet <span aria-hidden="true">↗</span></summary>
-                  <p class="config-note">Experimental real Zcash testnet observation. The verified public gRPC-Web gateway is prefilled. A testnet Unified Full Viewing Key is required to verify shielded Sapling memos; never enter spending keys. A viewing key reveals wallet activity. It is used locally in this browser, not sent to the gateway.</p>
-                  <label class="field-label" for="lightwalletd-url">TESTNET GRPC-WEB ENDPOINT</label><input id="lightwalletd-url" type="url" value="https://zps-testnet-gateway.onrender.com" placeholder="https://your-proxy.example" autocomplete="off" />
-                  <label class="field-label" for="viewing-key">VIEW-ONLY UFVK</label><input id="viewing-key" type="password" placeholder="Required each time; view-only testnet key" autocomplete="off" />
-                  <label class="field-label" for="birthday-height">ACCOUNT BIRTHDAY HEIGHT</label><input id="birthday-height" type="number" min="0" placeholder="Required for new account" />
-                  <label class="field-label" for="merchant-setup-passphrase">OPTIONAL / SAVE ENCRYPTED VIEWING PROFILE</label>
-                  <input id="merchant-setup-passphrase" type="password" autocomplete="new-password" placeholder="12+ character passphrase (optional)" />
-                  <p class="config-note">Optional: encrypt your testnet viewing key for future passphrase unlocks. The wallet's working database remains temporary and may rescan on return. No seed or spending key is stored.</p>
-                  <button id="open-testnet" class="button button-secondary full-width" type="button">Connect merchant wallet ↗</button>
+                    <summary>Connect an existing testnet wallet <span aria-hidden="true">↗</span></summary>
+                    <div class="merchant-setup-path mono" aria-label="Merchant connection steps">
+                      <span><b>01</b> VIEW KEY</span>
+                      <span><b>02</b> WALLET BIRTHDAY</span>
+                      <span><b>03</b> CONNECT</span>
+                    </div>
+                    <p class="merchant-setup-lead">Bring a Zcash <strong>testnet</strong> wallet that can export its Unified Full Viewing Key (UFVK). ZPS only reads payment evidence. It cannot spend funds or create a wallet for you.</p>
+                    <label class="field-label" for="viewing-key">01 / TESTNET VIEWING KEY (UFVK)</label>
+                    <input id="viewing-key" type="password" placeholder="Paste your wallet's testnet UFVK" autocomplete="off" aria-describedby="viewing-key-help" />
+                    <p id="viewing-key-help" class="merchant-field-hint">Export the viewing key from your existing testnet wallet. Never enter a seed phrase or private spending key. A UFVK is read-only but reveals wallet activity.</p>
+                    <details class="merchant-help-details">
+                      <summary>Where do I get a viewing key?</summary>
+                      <p>In a compatible testnet wallet, look for a viewing-key export. Copy its <strong>Unified Full Viewing Key</strong>, not its wallet address, recovery phrase or spending key. Some wallets cannot export a UFVK; you must use one that supports it.</p>
+                      <p>A receiving address alone cannot be converted into a viewing key. ZPS does not generate or store spending keys.</p>
+                    </details>
+                    <label class="field-label" for="birthday-height">02 / WALLET BIRTHDAY (BLOCK HEIGHT)</label>
+                    <input id="birthday-height" type="number" min="0" placeholder="e.g. the start height from your wallet" aria-describedby="birthday-height-help" />
+                    <p id="birthday-height-help" class="merchant-field-hint">Use the starting block height supplied by your wallet. This tells ZPS where to begin scanning. Entering 0 can trigger a very long historical scan; a height that's too recent can miss older payments.</p>
+                    <label class="field-label" for="merchant-setup-passphrase">SAVE THIS WALLET FOR NEXT TIME / OPTIONAL</label>
+                    <input id="merchant-setup-passphrase" type="password" autocomplete="new-password" placeholder="Choose a passphrase of 12+ characters" aria-describedby="merchant-save-help" />
+                    <p id="merchant-save-help" class="merchant-field-hint">Optional. Encrypts your viewing key locally in this browser so you can unlock it next time. Without it, you will need the UFVK again. A return visit may still require scanning.</p>
+                    <details class="merchant-connection-settings">
+                      <summary>Connection settings <span class="merchant-setting-state mono">DEFAULT GATEWAY</span></summary>
+                      <label class="field-label" for="lightwalletd-url">TESTNET GRPC-WEB ENDPOINT</label>
+                      <input id="lightwalletd-url" type="url" value="https://zps-testnet-gateway.onrender.com" placeholder="https://your-proxy.example" autocomplete="off" />
+                      <p class="merchant-field-hint">The testnet endpoint is preconfigured. Change this only if you operate another compatible gateway.</p>
+                    </details>
+                    <button id="open-testnet" class="button button-secondary full-width merchant-connect-action" type="button">03 / Connect view-only wallet <span aria-hidden="true">↗</span></button>
+                    <p class="merchant-path-footer">No viewing key yet? Choose <strong>Developer simulation</strong> above to explore the SDK without connecting a wallet. Simulated payments never move funds.</p>
                   </details>
                   <p id="wallet-connection-status" class="compatibility-note" role="status" aria-live="polite">Connect a view-only testnet wallet before creating a real payment request.</p>
                 </div>
