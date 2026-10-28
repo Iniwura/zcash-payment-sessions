@@ -808,6 +808,15 @@ function render(
       : mode === "simulation"
         ? "SIMULATED REQUEST / NO FUNDS"
         : "TESTNET REQUEST / AWAITING PROOF";
+  const action = document.getElementById("qr-instrument-action");
+  if (action) action.textContent = status === "PAID" && observation?.outcome === "EXACT"
+    ? "REQUEST FULFILLED / DO NOT PAY AGAIN"
+    : mode === "simulation"
+      ? "DEVELOPER DEMO / NO FUNDS"
+      : "SCAN WITH ZCASH WALLET";
+  document.getElementById("qr-receipt-link")?.classList.toggle(
+    "hidden", !(session?.status === "PAID" && observation?.outcome === "EXACT" && observation.payment !== undefined)
+  );
   renderReceipt(session, observation);
   renderTimeline(session?.status);
   renderException(session?.status, observation);
@@ -821,7 +830,7 @@ function renderReceipt(
   const panel = document.getElementById("receipt-panel");
   if (!panel) return;
   const payment = observation?.payment;
-  const issued = session?.status === "PAID" && payment !== undefined;
+  const issued = session?.status === "PAID" && observation?.outcome === "EXACT" && payment !== undefined;
   panel.classList.toggle("hidden", !issued);
   if (!issued || session === null || payment === undefined) return;
 
@@ -850,8 +859,9 @@ function renderReceipt(
 
 async function copyReceipt(): Promise<void> {
   const session = runtime?.controller.view.session;
-  const payment = runtime?.controller.view.observation?.payment;
-  if (session?.status !== "PAID" || payment === undefined) return;
+  const observation = runtime?.controller.view.observation;
+  const payment = observation?.payment;
+  if (session?.status !== "PAID" || observation?.outcome !== "EXACT" || payment === undefined) return;
   const simulation = mode === "simulation";
   const contents = [
     "ZPS / PAYMENT SESSION RECEIPT",
