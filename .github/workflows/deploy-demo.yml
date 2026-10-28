@@ -158,6 +158,8 @@ jobs:
           STAGE="$(mktemp -d)"
           cp -a dist-demo/. "$STAGE/"
           cp vercel.json "$STAGE/vercel.json"
+          mkdir -p "$STAGE/scripts"
+          cp scripts/await-vercel-artifact.sh "$STAGE/scripts/await-vercel-artifact.sh"
           cd "$STAGE"
           git init -q -b vercel-static
           git config user.name "github-actions[bot]"
