@@ -194,6 +194,8 @@ textarea { min-height: 82px; padding: 13px; resize: vertical; overflow-wrap: any
 .mode-button { border: 0; background: transparent; color: #adaca1; padding: 12px 9px; font-size: 11px; font-weight: 700; transition: background .2s,color .2s; }
 .mode-button.active { background: #e1dfd5; color: var(--ink); }
 .mode-button:not(:disabled):hover { background: #434238; }
+/* Keep the selected mode readable even while hovered. */
+.mode-button.active:not(:disabled):hover { background: #e1dfd5; color: var(--ink); }
 .compatibility-note { padding: 12px; background: #323128; font-size: 12px; line-height: 1.5; color: #f1c76e; margin: 12px 0 0; }
 .real-config { margin-top: 20px; padding: 16px; border: 1px solid #58564a; }
 .real-config .config-note { font-size: 12px; }
