@@ -1206,3 +1206,74 @@ textarea { min-height: 82px; padding: 13px; resize: vertical; overflow-wrap: any
   width:auto;height:auto;padding:12px 18px;clip-path:none;
   top:12px;left:12px;
 }
+
+
+/* Merchant setup guide — progressive explanation, unchanged ZPS editorial identity. */
+.real-config .merchant-step-marker {
+  color:#4c493e; font-size:10px; font-weight:700; letter-spacing:.04em;
+}
+.real-config .merchant-setup-path {
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;margin:5px 0 19px;font-size:10px;line-height:1.4;color:#cac6ba;
+}
+.real-config .merchant-setup-path span {
+  display:flex;align-items:center;gap:8px;
+  padding:11px 2px 9px;border-top:1px solid #696759;min-width:0;
+}
+.real-config .merchant-setup-path b {color:var(--acid);font-weight:700;}
+.real-config .merchant-setup-lead {
+  font-size:13px;line-height:1.65;color:#e0dccf;margin:0 0 19px;
+}
+.real-config .merchant-setup-lead strong {color:#fff9e8;}
+.real-config .merchant-field-hint {
+  font-size:11.5px;line-height:1.6;color:#c7c1b2;
+  margin:-4px 0 20px;max-width:53ch;
+}
+.real-config .merchant-advanced > .field-label {
+  display:block;margin-top:17px;margin-bottom:9px;
+}
+.real-config .merchant-advanced > input {width:100%;margin-bottom:12px;}
+.real-config .merchant-help-details,
+.real-config .merchant-connection-settings {
+  border:1px solid #5b594d;padding:0 13px;margin:1px 0 20px;
+}
+.real-config .merchant-connection-settings {margin-top:10px;margin-bottom:20px;}
+.real-config .merchant-advanced[open] .merchant-help-details > summary,
+.real-config .merchant-advanced[open] .merchant-connection-settings > summary {
+  display:flex;gap:8px;align-items:center;justify-content:space-between;
+  min-height:43px;padding:10px 0;margin:0;border:0;
+  color:#e5e1d5;font:700 11px/1.55 "Manrope",sans-serif;cursor:pointer;
+}
+.real-config .merchant-help-details[open] > summary,
+.real-config .merchant-connection-settings[open] > summary {
+  border-bottom:1px solid #5b594d!important;margin-bottom:14px!important;
+}
+.real-config .merchant-help-details p,
+.real-config .merchant-connection-settings p {
+  font-size:11.5px;color:#c9c4b7;line-height:1.65;
+  margin:0 0 13px;
+}
+.real-config .merchant-help-details strong {color:#f1ebd7;}
+.real-config .merchant-connection-settings .field-label {
+  display:block;margin-bottom:9px;
+}
+.real-config .merchant-connection-settings input {width:100%;margin-bottom:12px;}
+.real-config .merchant-setting-state {font:500 9px/1.4 var(--code);color:var(--acid);white-space:nowrap;}
+.real-config .merchant-connect-action {
+  min-height:54px;background:var(--acid);color:var(--ink);font-size:12px;
+}
+.real-config .merchant-connect-action:hover:not(:disabled) {background:#ffda5a;}
+.real-config .merchant-path-footer {
+  color:#c5c0b3;font-size:11.5px;line-height:1.6;margin:13px 0 1px;
+}
+.real-config .merchant-path-footer strong {color:#f2e8ce;}
+.real-config .merchant-help-details > summary:focus-visible,
+.real-config .merchant-connection-settings > summary:focus-visible {
+  outline:2px solid var(--acid);outline-offset:3px;
+}
+@media (max-width:620px) {
+  .real-config .merchant-setup-path {font-size:9px;gap:3px;}
+  .real-config .merchant-setup-path span {gap:5px;flex-wrap:wrap;}
+  .real-config .merchant-advanced {padding:13px;}
+  .real-config .merchant-setting-state {white-space:normal;text-align:right;}
+}
