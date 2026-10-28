@@ -43,6 +43,19 @@ def acceptance(browser, width: int, height: int) -> None:
         assert page.locator("#uri-display").input_value().startswith("zcash:")
         assert page.locator("#mode-badge").inner_text() == "Demo simulation"
         expect(page.locator("#guide-run")).to_be_enabled(timeout=15000)
+        expect(page.locator("#receipt-panel")).to_be_hidden()
+        assert page.locator("#qr-frame svg").count() == 1
+        assert "⚡" not in page.locator("body").inner_text()
+        assert "☕" not in page.locator("body").inner_text()
+        assert "🛡" not in page.locator("body").inner_text()
+        page.locator("#app-tour-btn").click()
+        expect(page.locator(".tour-card")).to_be_visible()
+        expect(page.locator(".tour-card .tour-badge")).to_contain_text("01 / 06")
+        for expected in ("02 / 06", "03 / 06", "04 / 06", "05 / 06", "06 / 06"):
+            page.locator(".tour-card .next-btn").click()
+            expect(page.locator(".tour-card .tour-badge")).to_contain_text(expected)
+        page.locator(".tour-card .next-btn").click()
+        expect(page.locator(".tour-card")).to_have_count(0)
         assert page.evaluate("window.crossOriginIsolated") is True
         if width < 900:
             doc_width = page.evaluate("document.documentElement.scrollWidth")
@@ -73,6 +86,13 @@ def acceptance(browser, width: int, height: int) -> None:
         page.locator("#guide-run").click()
         expect(status).to_have_text("PAID", timeout=20000)
         expect(page.locator("#detail-confirmations")).to_have_text("2")
+        expect(page.locator("#receipt-panel")).to_be_visible()
+        expect(page.locator("#receipt-mode")).to_have_text("SIMULATED / SDK TEST")
+        expect(page.locator("#receipt-disclosure")).to_contain_text("NOT ON-CHAIN")
+        expect(page.locator("#receipt-amount")).to_contain_text("ZEC")
+        expect(page.locator("#receipt-transaction")).to_contain_text("demo-")
+        expect(page.locator("#copy-receipt")).to_be_enabled()
+        expect(page.locator("#print-receipt")).to_be_enabled()
         assert "COMPLETE" in page.locator("#guide-status").inner_text()
         session_id = page.locator("#detail-session").inner_text()
 
@@ -87,6 +107,7 @@ def acceptance(browser, width: int, height: int) -> None:
 
         page.locator("#reset-demo").click()
         expect(status).to_have_text("AWAITING PAYMENT", timeout=30000)
+        expect(page.locator("#receipt-panel")).to_be_hidden()
         expect(page.locator("#qr-frame svg")).to_have_count(1)
         if page.locator("#simulation-controls").get_attribute("open") is None:
             page.locator("#simulation-controls summary").click()
