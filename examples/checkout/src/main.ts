@@ -310,6 +310,7 @@ async function initialize(): Promise<void> {
     runtime = await createSimulationRuntime();
   } else {
     runtime = undefined;
+    elements.walletConnectionStatus.dataset.phase = "idle";
     elements.walletConnectionStatus.textContent =
       "Connect a view-only TESTNET wallet to create a real shielded payment request.";
     // Production static delivery of the wallet WASM is large. Begin the
@@ -377,6 +378,12 @@ function bindEvents(): void {
   document.querySelectorAll<HTMLButtonElement>(".storefront-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const product = btn.dataset.product;
+      document.querySelectorAll<HTMLElement>(".storefront-card").forEach((card) => {
+        card.classList.toggle("is-selected", card.contains(btn));
+      });
+      document.querySelectorAll<HTMLButtonElement>(".storefront-btn").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button === btn));
+      });
       const amount = btn.dataset.amount;
       const memo = btn.dataset.memo;
       if (amount) elements.amountInput.value = amount;
@@ -436,6 +443,7 @@ async function selectMode(nextMode: DemoMode): Promise<void> {
     runtime = await createSimulationRuntime();
     mode = "simulation";
     elements.walletConnectionStatus.textContent = "";
+    elements.walletConnectionStatus.dataset.phase = "idle";
     render();
     renderMerchantOnboarding();
     return;
@@ -449,6 +457,7 @@ async function selectMode(nextMode: DemoMode): Promise<void> {
   runtime?.browserWallet?.close();
   runtime = undefined;
   mode = "testnet";
+  elements.walletConnectionStatus.dataset.phase = "idle";
   elements.walletConnectionStatus.textContent = "Connect a view-only testnet wallet before creating a real payment request.";
   render(null, undefined);
   renderMerchantOnboarding();
@@ -475,6 +484,7 @@ async function openTestnetWallet(viewingKeyOverride?: string): Promise<void> {
   openingTestnetWallet = true;
   elements.openTestnet.disabled = true;
   elements.openTestnet.textContent = "Opening wallet…";
+  elements.walletConnectionStatus.dataset.phase = "opening";
   elements.walletConnectionStatus.textContent = "Opening the WebZjs view-only wallet and local memo verifier. This may take a moment.";
   render();
   try {
@@ -484,6 +494,7 @@ async function openTestnetWallet(viewingKeyOverride?: string): Promise<void> {
       return;
     }
     runtime = next;
+    elements.walletConnectionStatus.dataset.phase = "ready";
     elements.walletConnectionStatus.textContent = "View-only testnet wallet ready. Create a real request, then refresh to scan the chain.";
     if (passphrase.length > 0) {
       try {
@@ -503,6 +514,7 @@ async function openTestnetWallet(viewingKeyOverride?: string): Promise<void> {
     renderMerchantOnboarding();
   } catch (error) {
     if (epoch === walletConnectionEpoch) {
+      elements.walletConnectionStatus.dataset.phase = "error";
       elements.walletConnectionStatus.textContent = "Could not open the view-only wallet. Check the error and try again.";
       showError(error);
     }
@@ -548,6 +560,9 @@ async function refreshStatus(): Promise<void> {
   if (runtime === undefined) return;
   clearError();
   elements.refreshStatus.disabled = true;
+  const refreshLabel = elements.refreshStatus.innerHTML;
+  elements.refreshStatus.textContent = runtime.browserWallet !== undefined ? "Scanning testnet…" : "Checking observations…";
+  elements.refreshStatus.setAttribute("aria-busy", "true");
 
   try {
     if (runtime.browserWallet !== undefined) {
@@ -560,6 +575,8 @@ async function refreshStatus(): Promise<void> {
     showError(error);
   } finally {
     elements.refreshStatus.disabled = false;
+    elements.refreshStatus.removeAttribute("aria-busy");
+    elements.refreshStatus.innerHTML = refreshLabel;
   }
 }
 

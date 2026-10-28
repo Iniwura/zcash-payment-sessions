@@ -34,11 +34,11 @@
       <!-- STOREFRONT SIMULATOR CONSOLE -->
       <section class="storefront" id="app-storefront" style="padding-top:10px;padding-bottom:36px;border-top:0;" aria-labelledby="storefront-title">
         <div class="section-rail mono" style="margin-bottom:20px;">
-          <span>01 / STOREFRONT SIMULATOR</span>
-          <span>SELECT A PRODUCT OR CONFIGURE CUSTOM ORDER</span>
+          <span>01 / SAMPLE ORDER PRESETS</span>
+          <span>SELECT A PRESET OR CONFIGURE YOUR OWN ORDER</span>
         </div>
         <div class="storefront-grid">
-          <div class="storefront-card">
+          <div class="storefront-card is-selected">
             <div class="storefront-top mono"><span>PRODUCT / 001</span><span>INSTANT DELIVERY</span></div>
             <div>
               <h3>☕ Cypherpunk Roast (12oz)</h3>
@@ -46,7 +46,7 @@
             </div>
             <div class="storefront-bottom">
               <div class="storefront-price mono">0.00010000 <span>ZEC (10k zat)</span></div>
-              <button type="button" class="button button-primary storefront-btn" data-product="Cypherpunk Roast (12oz)" data-amount="0.00010000" data-memo="order-coffee-918">
+              <button type="button" class="button button-primary storefront-btn" data-product="Cypherpunk Roast (12oz)" data-amount="0.00010000" data-memo="order-coffee-918" aria-pressed="true">
                 Select Product ↓
               </button>
             </div>
@@ -60,7 +60,7 @@
             </div>
             <div class="storefront-bottom">
               <div class="storefront-price mono">0.00050000 <span>ZEC (50k zat)</span></div>
-              <button type="button" class="button button-primary storefront-btn" data-product="Shielded VPN Pass (30 Days)" data-amount="0.00050000" data-memo="order-vpn-402">
+              <button type="button" class="button button-primary storefront-btn" data-product="Shielded VPN Pass (30 Days)" data-amount="0.00050000" data-memo="order-vpn-402" aria-pressed="false">
                 Select Product ↓
               </button>
             </div>
@@ -74,7 +74,7 @@
             </div>
             <div class="storefront-bottom">
               <div class="storefront-price mono">0.00100000 <span>ZEC (100k zat)</span></div>
-              <button type="button" class="button button-primary storefront-btn" data-product="Zcash Privacy Node Grant" data-amount="0.00100000" data-memo="order-grant-773">
+              <button type="button" class="button button-primary storefront-btn" data-product="Zcash Privacy Node Grant" data-amount="0.00100000" data-memo="order-grant-773" aria-pressed="false">
                 Select Product ↓
               </button>
             </div>
@@ -89,7 +89,7 @@
           <div id="order-item-name" class="order-summary-item">Cypherpunk Roast (12oz)</div>
           <div class="order-summary-memo mono">MEMO: <span id="order-memo-badge">order-coffee-918</span></div>
         </div>
-        <div style="text-align:right;">
+        <div class="order-summary-total">
           <span class="eyebrow mono" style="display:block;margin-bottom:4px;font-size:10px;color:#67645c;">AMOUNT DUE</span>
           <div id="order-amount-badge" class="order-summary-amount mono">0.00010000 ZEC</div>
         </div>
@@ -212,7 +212,7 @@
               <div><dt>Payment safety</dt><dd>Persisted / replay-safe</dd></div>
             </dl>
           </section>
-          <div class="checkout-disclaimer mono"><span>THIS IS A REFERENCE IMPLEMENTATION</span><span>LIVE HISTORICAL PROOF AVAILABLE BELOW ↓</span></div>
+          <div class="checkout-disclaimer mono"><span>THIS IS A REFERENCE IMPLEMENTATION</span><span><a href="https://github.com/Iniwura/zcash-payment-sessions/blob/main/LIVE_TESTNET_PROOF.md" target="_blank" rel="noopener noreferrer">HISTORICAL REAL-PAYMENT PROOF ↗</a></span></div>
         </div>
 
       </div>

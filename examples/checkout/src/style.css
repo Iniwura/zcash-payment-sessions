@@ -194,6 +194,8 @@ textarea { min-height: 82px; padding: 13px; resize: vertical; overflow-wrap: any
 .mode-button { border: 0; background: transparent; color: #adaca1; padding: 12px 9px; font-size: 11px; font-weight: 700; transition: background .2s,color .2s; }
 .mode-button.active { background: #e1dfd5; color: var(--ink); }
 .mode-button:not(:disabled):hover { background: #434238; }
+/* Keep the selected mode readable even while hovered. */
+.mode-button.active:not(:disabled):hover { background: #e1dfd5; color: var(--ink); }
 .compatibility-note { padding: 12px; background: #323128; font-size: 12px; line-height: 1.5; color: #f1c76e; margin: 12px 0 0; }
 .real-config { margin-top: 20px; padding: 16px; border: 1px solid #58564a; }
 .real-config .config-note { font-size: 12px; }
@@ -852,4 +854,124 @@ textarea { min-height: 82px; padding: 13px; resize: vertical; overflow-wrap: any
   .checkout-standalone-header #app-tour-btn { white-space: nowrap; }
   .button-stack .button { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
   .merchant-advanced summary { min-width: 0; overflow-wrap: anywhere; }
+}
+
+
+/* Editorial checkout refinement — retain ZPS paper, ink, acid and existing structure. */
+.checkout-standalone-header { gap: 16px 28px; }
+.checkout-standalone-header .brand { letter-spacing: -.09em; }
+.checkout-standalone-header .network-badge {
+  display: inline-flex; align-items: center; gap: 9px;
+  color: #514e44; font-size: 10px; white-space: nowrap;
+}
+.checkout-standalone-header .network-badge .disclosure-dot { flex: none; }
+.checkout-standalone-wrap { margin-bottom: clamp(56px, 7vw, 100px); }
+.storefront-grid { gap: 12px; }
+.storefront-card {
+  position: relative; overflow: hidden;
+  transition: background .22s ease, border-color .22s ease, box-shadow .22s ease, transform .22s ease;
+}
+.storefront-card.is-selected { background: #f6f1e4; box-shadow: inset 0 0 0 2px var(--ink); }
+.storefront-card.is-selected .storefront-btn { background: var(--ink); color: #f8f5ec; }
+.storefront-card.is-selected .storefront-btn::after { content: "✓"; margin-left: auto; font-size: 14px; }
+.storefront-card:focus-within { outline: 2px solid var(--acid); outline-offset: 3px; }
+.storefront-card .storefront-top { gap: 12px; line-height: 1.5; }
+.storefront-card .storefront-top span:last-child { text-align: right; }
+.storefront-card .storefront-price { font-size: clamp(21px, 2.3vw, 32px); overflow-wrap: anywhere; }
+.storefront-card .storefront-price span { display: inline-block; line-height: 1.6; white-space: nowrap; }
+.order-summary-box { background: #e3dfd4; }
+.order-summary-box > div { min-width: 0; }
+.order-summary-item { font-size: clamp(18px, 2vw, 25px); }
+.order-summary-memo { margin-top: 6px; overflow-wrap: anywhere; }
+.order-summary-total { text-align: right; }
+.order-summary-amount { font-size: clamp(21px, 2.3vw, 30px); letter-spacing: -.05em; }
+.reviewer-start { border-left: 4px solid var(--ink); }
+.guide-status { letter-spacing: .01em; }
+.checkout-frame-top { letter-spacing: .035em; }
+.checkout-card .uri-row textarea { min-width: 0; }
+.checkout-card .qr-stage { border: 1px solid #b3afa2; }
+.checkout-card .qr-frame { box-shadow: 0 12px 30px rgba(0,0,0,.08); }
+.controls-card .button-stack { padding-top: 18px; border-top: 1px solid #49483f; }
+.controls-card .button-stack .button { min-height: 46px; }
+.controls-card .button-stack .button-primary { min-height: 58px; }
+.checkout-frame .field-label { letter-spacing: .035em; }
+.checkout-frame input::placeholder, .checkout-frame textarea::placeholder { color: #aaa79c; }
+.checkout-frame input:focus-visible, .checkout-frame textarea:focus-visible {
+  outline: 2px solid var(--acid); outline-offset: 2px;
+}
+.checkout-frame button:disabled { opacity: .64; }
+.checkout-frame .button:active:not(:disabled), .storefront-btn:active:not(:disabled) { transform: translateY(0); }
+.checkout-frame .expiry-row { gap: 20px; line-height: 1.5; }
+.checkout-disclaimer a { color: #f2d77f; text-underline-offset: 3px; }
+.checkout-disclaimer a:hover { color: #fff4ca; }
+
+/* Fix actual contrast defects in the light merchant unlock panel and dark setup. */
+.real-config .merchant-profile-header { border-color: #676454; }
+.real-config .merchant-profile-header strong { color: #f1f0e8; }
+.real-config .merchant-profile-header p { color: #c9c6ba; }
+.real-config .merchant-unlock-panel {
+  background: #f4f0e6; color: var(--ink); border-color: #b6b0a1;
+  gap: 10px; padding: clamp(14px, 2vw, 22px);
+}
+.real-config .merchant-unlock-panel .field-label { color: #444138; margin: 0; }
+.real-config .merchant-unlock-panel .config-note { color: #575347; }
+.real-config .merchant-unlock-panel .button-quiet { color: #38362f; }
+.real-config .merchant-unlock-panel .button-quiet:hover { text-decoration: underline; }
+.real-config .merchant-advanced { background: #292923; border-color: #686659; }
+.real-config .merchant-advanced summary {
+  min-height: 36px; color: #f6f3e8; line-height: 1.5;
+}
+.real-config .merchant-advanced summary:focus-visible, .simulation-card summary:focus-visible {
+  outline: 3px solid var(--acid); outline-offset: 4px;
+}
+.real-config .merchant-advanced .config-note { color: #c9c6b9; }
+.real-config .merchant-advanced .field-label { color: #e3dfd0; }
+.real-config .merchant-advanced input { border-color: #797669; }
+.real-config .merchant-advanced input:focus { border-color: var(--acid); }
+#wallet-connection-status {
+  position: relative; margin-top: 14px; padding: 13px 15px;
+  border-left: 3px solid #a19b83;
+  color: #eee8d5; background: #323128;
+}
+#wallet-connection-status[data-phase="opening"] { border-color: var(--acid); padding-left: 32px; }
+#wallet-connection-status[data-phase="opening"]::before {
+  content: ""; position: absolute; left: 13px; top: 19px;
+  height: 8px; width: 8px; border-radius: 50%; background: var(--acid);
+  animation: walletWaiting 1.1s ease-in-out infinite alternate;
+}
+#wallet-connection-status[data-phase="ready"] { border-color: #9dc08b; color: #e3ebd9; }
+#wallet-connection-status[data-phase="error"] { border-color: #ffa98e; color: #ffdbd0; }
+#refresh-status[aria-busy="true"] { border-color: var(--acid); color: #f0d17f; }
+@keyframes walletWaiting { to { opacity: .3; transform: scale(.7); } }
+
+@media (min-width: 621px) and (max-width: 900px) {
+  .storefront-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .storefront-card { min-height: 310px; }
+  .checkout-standalone-header { flex-wrap: wrap; }
+}
+@media (max-width: 620px) {
+  .checkout-standalone-wrap { margin-top: 24px; }
+  .storefront-grid { gap: 10px; }
+  .storefront-card { min-height: 0; padding: 21px; }
+  .storefront-card h3 { font-size: 25px; }
+  .storefront-card p { margin-bottom: 22px; }
+  .storefront-bottom { padding-top: 14px; }
+  .order-summary-box { padding: 19px; gap: 14px; }
+  .order-summary-total { text-align: left; width: 100%; border-top: 1px solid #bcb7a9; padding-top: 13px; }
+  .reviewer-start { border-left-width: 3px; }
+  .checkout-frame .card-heading { gap: 12px; }
+  .checkout-frame .status-pill { white-space: normal; text-align: center; }
+  .checkout-frame .uri-row { flex-wrap: wrap; }
+  .checkout-frame .uri-row textarea { flex: 1 1 100%; }
+  .checkout-frame .uri-row .button { width: 100%; justify-content: center; min-height: 43px; }
+  .real-config { padding: 13px; }
+  .real-config .merchant-unlock-panel { padding: 14px; }
+  .checkout-standalone-header #app-tour-btn { min-height: 42px; }
+}
+@media (max-width: 620px) {
+  /* The global header badge styling must not override the compact mobile header. */
+  .checkout-standalone-header .network-badge { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #wallet-connection-status[data-phase="opening"]::before { animation: none; }
 }
