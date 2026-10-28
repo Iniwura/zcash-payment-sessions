@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import config from "../examples/checkout/vite.config.js";
+
+const vercelConfig = JSON.parse(
+  readFileSync(resolve(process.cwd(), "vercel.json"), "utf8")
+) as { headers: Array<{ headers: Array<{ key: string; value: string }> }> };
 
 describe("checkout browser worker configuration", () => {
   it("serves the cross-origin isolation headers required by WebZjs workers", () => {
@@ -27,5 +33,13 @@ describe("checkout browser worker configuration", () => {
         expect.objectContaining({ name: "webzjs-wallet-browser-import" })
       ])
     );
+  });
+
+  it("allows WebZjs sync eval under the checkout CSP", () => {
+    const csp = vercelConfig.headers
+      .flatMap((entry) => entry.headers)
+      .find((header) => header.key === "Content-Security-Policy")?.value;
+
+    expect(csp).toContain("script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'");
   });
 });
