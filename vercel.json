@@ -2,6 +2,16 @@
   "version": 2,
   "cleanUrls": true,
   "ignoreCommand": "test \"$VERCEL_GIT_COMMIT_REF\" != \"vercel-static\"",
+  "rewrites": [
+    {
+      "source": "/webzjs-wallet/",
+      "destination": "/webzjs-wallet/webzjs_wallet.js"
+    },
+    {
+      "source": "/webzjs-wallet",
+      "destination": "/webzjs-wallet/webzjs_wallet.js"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
