@@ -1,0 +1,79 @@
+name: Probe public production isolation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/probe-production-isolation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify document response headers and browser gate
+        run: |
+          python3 -m pip install --user --quiet playwright==1.55.0
+          python3 - <<'PY'
+          import json
+          import shutil
+          import urllib.request
+          from playwright.sync_api import sync_playwright
+
+          URLs = [
+            "https://zcash-payment-sessions.vercel.app/checkout",
+            "https://zcash-payment-sessions.vercel.app/checkout.html",
+            "https://zcash-payment-sessions-qpu8xdi8a-iniwura-akurus-projects.vercel.app/checkout"
+          ]
+          for url in URLs:
+              try:
+                  req = urllib.request.Request(url, headers={"User-Agent": "ZPS production isolation diagnostic"})
+                  with urllib.request.urlopen(req, timeout=20) as response:
+                      print("DOCUMENT", json.dumps({
+                          "request": url, "final_url": response.url, "status": response.status,
+                          "headers": {key: response.headers.get(key, "") for key in (
+                              "cross-origin-opener-policy", "cross-origin-embedder-policy",
+                              "cross-origin-resource-policy", "content-security-policy",
+                              "content-type", "cache-control", "x-vercel-id"
+                          )}
+                      }))
+              except Exception as exc:
+                  print("DOCUMENT ERROR", url, repr(exc))
+
+          exe = shutil.which("google-chrome") or shutil.which("chromium") or shutil.which("chromium-browser")
+          if not exe:
+              raise RuntimeError("Chrome missing")
+          with sync_playwright() as p:
+              browser = p.chromium.launch(executable_path=exe, headless=True,
+                  args=["--no-sandbox","--disable-dev-shm-usage"])
+              for url in URLs[:2]:
+                  page = browser.new_page()
+                  errors = []
+                  page.on("pageerror",lambda e: errors.append(str(e)))
+                  try:
+                      r = page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                      page.locator("#mode-testnet").wait_for(timeout=20000)
+                      page.wait_for_timeout(900)
+                      result = page.evaluate("""() => ({
+                          url: location.href, secure: isSecureContext,
+                          isolated: crossOriginIsolated,
+                          sharedArrayBuffer: typeof SharedArrayBuffer !== 'undefined',
+                          title: document.title,
+                          modeDisabled: document.querySelector('#mode-testnet')?.disabled,
+                          modeActive: document.querySelector('#mode-testnet')?.classList.contains('active'),
+                          notice: document.querySelector('#real-mode-notice')?.textContent?.trim(),
+                          responseMeta: document.querySelector('meta[http-equiv]')?.outerHTML ?? null
+                      })""")
+                      print("BROWSER", json.dumps({"url":url,"status":r.status if r else None,
+                          "result":result,"errors":errors}))
+                  except Exception as exc:
+                      print("BROWSER ERROR",url,repr(exc),"errors",errors)
+                  finally:
+                      page.close()
+              browser.close()
+          PY
