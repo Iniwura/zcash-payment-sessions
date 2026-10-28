@@ -360,6 +360,12 @@ function bindEvents(): void {
   elements.refreshStatus.addEventListener("click", () => void refreshStatus());
   elements.resetDemo.addEventListener("click", resetDemo);
   elements.copyUri.addEventListener("click", () => void copyUri());
+  document.getElementById("copy-receipt")?.addEventListener("click", () => void copyReceipt());
+  document.getElementById("print-receipt")?.addEventListener("click", () => {
+    if (runtime?.controller.view.session?.status === "PAID") window.print();
+  });
+  elements.amountInput.addEventListener("input", updateCustomOrder);
+  elements.memoInput.addEventListener("input", updateCustomOrder);
   document.getElementById("load-verified-proof")?.addEventListener("click", () => loadVerifiedProof());
   document.getElementById("load-verified-proof-2")?.addEventListener("click", () => loadVerifiedProof());
 
@@ -405,6 +411,25 @@ function bindEvents(): void {
       }
     });
   });
+}
+
+function syncOrderBadges(): void {
+  const amount = document.getElementById("order-amount-badge");
+  const memo = document.getElementById("order-memo-badge");
+  if (amount) amount.textContent = `${elements.amountInput.value.trim() || "—"} ZEC`;
+  if (memo) memo.textContent = elements.memoInput.value.trim() || "—";
+}
+
+function updateCustomOrder(): void {
+  document.querySelectorAll<HTMLElement>(".storefront-card").forEach((card) => {
+    card.classList.remove("is-selected");
+  });
+  document.querySelectorAll<HTMLButtonElement>(".storefront-btn").forEach((button) => {
+    button.setAttribute("aria-pressed", "false");
+  });
+  const orderItem = document.getElementById("order-item-name");
+  if (orderItem) orderItem.textContent = "Custom payment request";
+  syncOrderBadges();
 }
 
 async function unlockMerchantWallet(): Promise<void> {
@@ -775,9 +800,80 @@ function render(
     elements.qrFrame.innerHTML = '<div class="qr-empty"><span class="qr-mark">⌁</span><span>QR appears when a session is created</span></div>';
   }
 
+  const qrState = document.getElementById("qr-instrument-state");
+  if (qrState) qrState.textContent = session === null
+    ? "AWAITING REQUEST"
+    : status === "PAID"
+      ? "REQUEST RECORDED / RECEIPT BELOW"
+      : mode === "simulation"
+        ? "SIMULATED REQUEST / NO FUNDS"
+        : "TESTNET REQUEST / AWAITING PROOF";
+  renderReceipt(session, observation);
   renderTimeline(session?.status);
   renderException(session?.status, observation);
   renderCountdown(session);
+}
+
+function renderReceipt(
+  session: PublicPaymentSession | null,
+  observation: PaymentObservationResult | undefined
+): void {
+  const panel = document.getElementById("receipt-panel");
+  if (!panel) return;
+  const payment = observation?.payment;
+  const issued = session?.status === "PAID" && payment !== undefined;
+  panel.classList.toggle("hidden", !issued);
+  if (!issued || session === null || payment === undefined) return;
+
+  const simulation = mode === "simulation";
+  const details: Record<string, string> = {
+    "receipt-mode": simulation ? "SIMULATED / SDK TEST" : "REAL ZCASH TESTNET",
+    "receipt-amount": `${formatZec(session.amountZatoshis)} ZEC`,
+    "receipt-confirmations": String(payment.confirmations),
+    "receipt-session": session.id,
+    "receipt-payment": payment.paymentId,
+    "receipt-transaction": payment.txid,
+    "receipt-memo": session.memo,
+    "receipt-subtitle": simulation
+      ? "The public SDK reached PAID using synthetic wallet observations. No funds were transferred."
+      : "The public SDK reached PAID after observing the required testnet payment evidence.",
+    "receipt-disclosure": simulation
+      ? "DEVELOPER SIMULATION / NOT ON-CHAIN PAYMENT EVIDENCE"
+      : "REAL TESTNET OBSERVATION / NOT A MAINNET RECEIPT"
+  };
+  for (const [id, value] of Object.entries(details)) {
+    const node = document.getElementById(id);
+    if (node) node.textContent = value;
+  }
+  panel.dataset.mode = simulation ? "simulation" : "testnet";
+}
+
+async function copyReceipt(): Promise<void> {
+  const session = runtime?.controller.view.session;
+  const payment = runtime?.controller.view.observation?.payment;
+  if (session?.status !== "PAID" || payment === undefined) return;
+  const simulation = mode === "simulation";
+  const contents = [
+    "ZPS / PAYMENT SESSION RECEIPT",
+    simulation ? "DEVELOPER SIMULATION — NO FUNDS TRANSFERRED" : "REAL ZCASH TESTNET — NOT MAINNET",
+    `Status: ${session.status}`,
+    `Amount: ${formatZec(session.amountZatoshis)} ZEC`,
+    `Session ID: ${session.id}`,
+    `Payment ID: ${payment.paymentId}`,
+    `Transaction: ${payment.txid}`,
+    `Confirmations: ${payment.confirmations}`,
+    `Correlation memo: ${session.memo}`
+  ].join("\n");
+  try {
+    await navigator.clipboard.writeText(contents);
+    const button = document.getElementById("copy-receipt");
+    if (button) {
+      button.textContent = "Receipt copied";
+      window.setTimeout(() => { button.textContent = "Copy receipt ↗"; }, 1400);
+    }
+  } catch (error) {
+    showError(error);
+  }
 }
 
 function renderTimeline(status: PublicPaymentSession["status"] | undefined): void {
