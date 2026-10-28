@@ -3,6 +3,8 @@ name: Verify real testnet checkout integration
 on:
   push:
     branches: [feat/live-testnet-checkout]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
