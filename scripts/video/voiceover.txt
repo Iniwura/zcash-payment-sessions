@@ -1,0 +1,17 @@
+ZIP-321 tells a Zcash wallet what to pay. But when a merchant receives a shielded transaction, a payment request alone cannot answer the next question: did the right payment arrive, and can it be credited safely?
+
+This is Zcash Payment Sessions. A reusable TypeScript SDK that adds the missing payment lifecycle.
+
+Here is the reference checkout. A merchant sets an amount and an order memo. ZPS creates a ZIP-321 request, with an exact recipient, amount, and memo, and presents it as a scannable QR code.
+
+In real testnet mode, the merchant connects a view-only wallet. The browser can observe payments without holding a spending key. The wallet synchronizes through a Zcash testnet gateway, while memo evidence is processed locally.
+
+For an immediate walkthrough, developer simulation exercises the same payment-session logic using synthetic observations. Watch the states: awaiting payment. Detected. Confirming. And paid. This is a simulation, not a funded transaction.
+
+The important part is what happens underneath. ZPS matches the exact amount and memo, binds a payment to its transaction, pool, and output index, and records that output in a consumed-payment ledger. It also handles expiry, ambiguity, and explicit chain reorganizations without inventing settlement from missing evidence.
+
+And this is the independent real-chain proof. On October eleventh, an actual Zcash testnet payment of ten thousand zatoshis reached paid through the SDK. Its memo was recovered from the shielded transaction, confirmations were verified, and a second session could not claim the same output.
+
+This is more than a QR generator. It is the reusable verification layer between a Zcash payment request and a trustworthy application state.
+
+Zcash Payment Sessions. Built for developers, with correctness at the center.
