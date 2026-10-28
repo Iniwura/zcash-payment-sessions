@@ -1196,3 +1196,13 @@ textarea { min-height: 82px; padding: 13px; resize: vertical; overflow-wrap: any
 @media print {
   .terminal-process,.qr-receipt-link {display:none!important;}
 }
+
+/* Keep skip navigation reachable by keyboard, never floating into visual captures. */
+.skip-link:not(:focus-visible) {
+  width:1px;height:1px;padding:0;overflow:hidden;
+  clip-path:inset(50%);white-space:nowrap;top:0;
+}
+.skip-link:focus-visible {
+  width:auto;height:auto;padding:12px 18px;clip-path:none;
+  top:12px;left:12px;
+}
