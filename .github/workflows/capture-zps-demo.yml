@@ -20,6 +20,7 @@ jobs:
       - name: Install Playwright for production capture
         run: |
           python3 -m pip install --user playwright==1.55.0
+          python3 -m playwright install ffmpeg
           command -v google-chrome || command -v chromium
       - name: Capture real public browser interactions
         run: python3 -u scripts/video/capture_zps.py
@@ -38,7 +39,8 @@ jobs:
               head=f.read_bytes()[:16]
               print("VOICEOVER_DOWNLOAD",f.stat().st_size,repr(head))
               if f.stat().st_size < 10000 or (not head.startswith(b'ID3') and head[0:1] != b'\xff'):
-                  print("VOICEOVER_NOTE: not a verified MP3; retaining for review")
+                  print("VOICEOVER_NOTE: unavailable; clearing HTML response")
+                  f.unlink()
           PY
       - name: Upload actual screen recordings and narration
         if: always()
