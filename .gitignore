@@ -11,3 +11,15 @@ examples/checkout/public/sapling-hydrator/
 # Local testnet-only credential material must remain outside the repository.
 *.seed.bin
 testnet-seed.bin
+
+# Local tooling, browser capture, editor and system artifacts
+.vercel/
+visual-audit/
+playwright-report/
+test-results/
+*.tsbuildinfo
+*.log
+.DS_Store
+Thumbs.db
+__pycache__/
+.pytest_cache/
