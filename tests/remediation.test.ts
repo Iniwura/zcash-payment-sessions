@@ -13,6 +13,7 @@ import {
 
 class AtomicMemoryStorage implements KeyValueStorage {
   private readonly values = new Map<string, string>();
+  claimUnavailable = false;
 
   getItem(key: string): string | null {
     return this.values.get(key) ?? null;
@@ -27,6 +28,9 @@ class AtomicMemoryStorage implements KeyValueStorage {
   }
 
   claimItem(key: string, owner: string): string | null {
+    if (this.claimUnavailable) {
+      throw new Error("claim unavailable");
+    }
     const existing = this.values.get(key);
     if (existing !== undefined) return existing;
     this.values.set(key, owner);
@@ -309,6 +313,23 @@ describe("critical observation correctness", () => {
 
     expect(result.outcome).toBe("CONCURRENCY_UNSUPPORTED");
     expect(sessions.load(session.id)?.status).toBe("AWAITING_PAYMENT");
+  });
+
+  it("fails closed when an atomic claim adapter becomes unavailable", async () => {
+    const storage = new AtomicMemoryStorage();
+    storage.claimUnavailable = true;
+    const sessions = new PaymentSessionStore(storage);
+    const monitor = new PaymentMonitor(sessions, storage);
+    const session = createPaymentSession({ amountZatoshis: 10_000n, memo: "order-1" });
+    sessions.save(session);
+
+    const result = await monitor.observe(session.id, [
+      observedPayment({ confirmations: 0, status: "PENDING" })
+    ]);
+
+    expect(result.outcome).toBe("TEMPORARILY_UNAVAILABLE");
+    expect(sessions.load(session.id)?.status).toBe("AWAITING_PAYMENT");
+    expect(storage.getItem("zcash-payment-consumed:old-tx:orchard:0")).toBeNull();
   });
 });
 
