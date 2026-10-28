@@ -1,0 +1,38 @@
+name: Collect generated ZPS studio narration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/collect-zps-voice.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch seven voiceover segments generated for ZPS
+        run: |
+          mkdir -p narration
+          curl --fail --location --silent --show-error --retry 2 --max-time 60 'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/89b0e7b5-a5c8-4916-9922-45503e544052.mp3' --output narration/voice-01.mp3
+          curl --fail --location --silent --show-error --retry 2 --max-time 60 'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/2263945a-f78a-4ffd-a67a-b7ea6f445e75.mp3' --output narration/voice-02.mp3
+          curl --fail --location --silent --show-error --retry 2 --max-time 60 'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/0a8bd767-71f4-4bfc-a4ea-f7e8bf825d19.mp3' --output narration/voice-03.mp3
+          curl --fail --location --silent --show-error --retry 2 --max-time 60 'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/7ec1ff6b-1d13-4723-a6ca-79d0e52b1576.mp3' --output narration/voice-04.mp3
+          curl --fail --location --silent --show-error --retry 2 --max-time 60 'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/d4760300-4c1f-421d-8b03-5566b85a7f17.mp3' --output narration/voice-05.mp3
+          curl --fail --location --silent --show-error --retry 2 --max-time 60 'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/cbaa75f7-280f-430d-831f-af0bf363e160.mp3' --output narration/voice-06.mp3
+          curl --fail --location --silent --show-error --retry 2 --max-time 60 'https://storage.googleapis.com/adm--audio-playback--7d--public/mcp-preview/73bdaa29-d485-48e1-823e-17d7910cd280.mp3' --output narration/voice-07.mp3
+          python3 - <<'PY'
+          from pathlib import Path
+          for f in sorted(Path("narration").glob("*.mp3")):
+              raw=f.read_bytes()
+              print(f.name,len(raw),repr(raw[:12]))
+              assert len(raw)>2000 and (raw.startswith(b"ID3") or raw[:1]==b"\xff"),f"Invalid MP3: {f}"
+          assert len(list(Path("narration").glob("*.mp3")))==7
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zps-studio-voiceover-seven-scenes
+          path: narration/
+          retention-days: 7
