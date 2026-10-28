@@ -51,6 +51,7 @@ def acceptance(browser, width: int, height: int) -> None:
         page.locator("#app-tour-btn").click()
         expect(page.locator(".tour-card")).to_be_visible()
         expect(page.locator(".tour-card .tour-badge")).to_contain_text("01 / 06")
+        page.locator(".tour-card").screenshot(path=str(OUT / f"tour-{width}.png"), animations="disabled", timeout=30000)
         for expected in ("02 / 06", "03 / 06", "04 / 06", "05 / 06", "06 / 06"):
             page.locator(".tour-card .next-btn").click()
             expect(page.locator(".tour-card .tour-badge")).to_contain_text(expected)
@@ -93,6 +94,10 @@ def acceptance(browser, width: int, height: int) -> None:
         expect(page.locator("#receipt-transaction")).to_contain_text("demo-")
         expect(page.locator("#copy-receipt")).to_be_enabled()
         expect(page.locator("#print-receipt")).to_be_enabled()
+        page.locator("#receipt-panel").screenshot(
+            path=str(OUT / f"receipt-{width}.png"), animations="disabled", timeout=30000
+        )
+        assert page.evaluate("document.documentElement.scrollWidth") <= width + 2
         assert "COMPLETE" in page.locator("#guide-status").inner_text()
         session_id = page.locator("#detail-session").inner_text()
 
