@@ -79,6 +79,15 @@ export class WebZjsBrowserWallet implements WebZjsWalletLike {
     };
   }
 
+  /**
+   * Start the browser WASM and worker pool before a merchant submits wallet
+   * credentials. This is intentionally separate from wallet opening: it does
+   * not create an account, contact the gateway, or persist any state.
+   */
+  static async prewarm(threadCount?: number): Promise<void> {
+    await initializeWebZjs(threadCount);
+  }
+
   static async open(
     options: WebZjsBrowserWalletOptions
   ): Promise<WebZjsBrowserWallet> {
