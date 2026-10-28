@@ -1,254 +1,251 @@
 # Zcash Payment Sessions
 
-Zcash Payment Sessions is a browser SDK that turns a ZIP-321 payment request into a persistent,
-replay-safe payment lifecycle.
+**A reusable TypeScript SDK for verifiable Zcash payment checkouts.**
+
+ZIP-321 can tell a wallet *what to pay*. It does not tell an application whether the intended shielded payment was received, whether it belongs to this order, whether it has enough confirmations, or whether the same output was already used to credit another order.
+
+**Zcash Payment Sessions (ZPS) provides that missing application layer:** generate a ZIP-321 request, track a durable payment session, correlate observed Zcash outputs by exact amount and memo, handle confirmations and explicit reorganizations, and refuse ambiguous or duplicate settlement.
+
+Built for **ZECATHON 2026 · Core & Tooling**. The deliverable is the **SDK**; the public merchant checkout is a working reference implementation, not a custodial payment processor.
+
+| Explore | Link |
+| --- | --- |
+| **Try the reference checkout** | **[Open ZPS on Vercel](https://zcash-payment-sessions.vercel.app/checkout)** |
+| **Evaluate in three minutes** | [Judge/reviewer walkthrough](docs/REVIEWER_GUIDE.md) |
+| **Inspect an actual paid testnet session** | [Recorded on-chain payment and SDK lifecycle](LIVE_TESTNET_PROOF.md) |
+| **Understand the trust boundaries** | [Threat model](docs/THREAT_MODEL.md) |
+| **Inspect the implementation** | [SDK source](src/index.ts) · [Reference app](examples/checkout/) · [Tests](tests/) |
+
+> **Evidence distinction:** A historical funded Zcash **testnet** transaction reached `PAID` through the real SDK (recorded October 11, 2026). The current Vercel checkout has also opened a real view-only testnet wallet, generated a ZIP-321 request, and synchronized against the testnet gateway in browser acceptance tests. **A separate newly funded payment through the current public Vercel checkout has not been demonstrated.** Developer simulation is clearly labeled and never presented as on-chain settlement.
+
+## The problem
+
+Accepting shielded Zcash payments creates several application-specific responsibilities beyond producing a payment URI:
+
+| Requirement | Why a payment URI alone is insufficient | ZPS behavior |
+| --- | --- | --- |
+| Payment correlation | Two orders can use the same amount | Requires the intended amount **and memo** |
+| Output identity | A transaction can have multiple outputs | Identifies an output by transaction ID, pool, and output index |
+| Finality policy | Detection is not the same as confirmation | Tracks confirmation depth before `PAID` |
+| Idempotency | Repeated scans or page reloads must not credit twice | Persists a session match and consumed-payment ledger |
+| Concurrency | Two tabs can race to claim one payment | Requires an atomic claim operation; otherwise fails closed |
+| Failure handling | Missing metadata or RPC errors are not proof of a reorg | Keeps the last trusted state; exposes incomplete/unavailable results |
+| Chain reorganizations | Previously observed payment evidence can be invalidated | Handles **explicit** reorg evidence and eligible replacement payments |
+| Expiration and ambiguity | Late or multiple matches cannot be silently accepted | Explicit `EXPIRED` / `AMBIGUOUS` behavior |
+
+This makes ZPS useful as infrastructure for merchant checkouts, invoices, donations, subscriptions, and other applications that need to **reconcile a shielded payment with an intended request**.
+
+## What is implemented
+
+- **ZIP-321 request generation** using the pinned WebZjs requests WASM package, including exact amount and memo.
+- **Stateful sessions** with creation, expiry, serialization, restoration, and validated transitions.
+- **Payment observation and matching** using WebZjs wallet received-output data; exact memo and zatoshi amount are required.
+- **Confirmation-aware settlement**: `AWAITING_PAYMENT → DETECTED → CONFIRMING → PAID`.
+- **Replay and duplicate protection** through a persistent consumed-output ledger and atomic claim contract.
+- **Explicit exceptional states**: `EXPIRED`, `AMBIGUOUS`, and `REORGED`; incomplete observations and transient errors do not fabricate finality.
+- **Current-consensus Sapling memo compatibility** via a separate browser-compatible Rust/WASM hydrator for full transaction data that the pinned WebZjs parser cannot interpret.
+- **View-only reference wallet** in the browser, testnet gateway connectivity, optional locally encrypted merchant profile, and a real ZIP-321 QR.
+- **A separated developer simulation** for inspecting success, failure, ambiguity, replay, expiry, and reorg behavior without moving funds.
+- **Evidence-based receipts** visible only when the checkout's SDK session is `PAID` with exact payment evidence; simulated receipts explicitly say they are simulated.
+
+### Session model
 
 ```text
-AWAITING_PAYMENT -> DETECTED -> CONFIRMING -> PAID
+AWAITING_PAYMENT ──exact output──▶ DETECTED ──confirmations──▶ CONFIRMING ──threshold──▶ PAID
+       │                               │                           │                      │
+       └──────────expiry───────────────┴───────────expiry──────────┘                      │
+                                                               explicit chain reorg ◀─────┘
+                                                                     │
+                                                                  REORGED
+                                                                     │
+                                                         eligible replacement observation
 ```
 
-ZIP-321 tells a wallet what to pay. An application still needs to know whether the exact payment
-arrived, whether its amount and memo match, whether it has enough confirmations, whether the
-request expired, whether it was already consumed, and whether the result survives a reload.
+The state machine also represents ambiguity and invalid transitions. The diagram is a conceptual overview; authoritative behavior and allowed transitions live in [`src/session.ts`](src/session.ts) and [`src/monitor.ts`](src/monitor.ts).
 
-The SDK provides ZIP-321 request generation through WebZjs, persistent payment sessions, exact
-amount and memo correlation, stable `txid + pool + output index` identities, confirmation
-progression, expiry, reorg-safe states, local current-consensus Sapling memo hydration, a
-consumed-payment ledger, duplicate-credit prevention, and cross-session replay protection.
+## Quick evaluation: choose one of two honest paths
 
-## Public SDK in one minute
+### A. Developer simulation — no wallet or funds
 
-The integration uses only the package facade. Wallet creation and transport setup are application
-responsibilities; a WebZjs-compatible wallet adapter supplies received payments to `refresh()`.
+1. Visit **[the checkout](https://zcash-payment-sessions.vercel.app/checkout)** and select **Developer simulation**.
+2. Choose an example order or enter an amount and unique correlation memo.
+3. Use the **guided payment walkthrough** to create the request, display its ZIP-321 URI and QR, and observe SDK states.
+4. Inspect the **simulated** receipt, refresh the page, and explore the edge-case scenarios.
+5. Confirm the UI always identifies this mode as simulation. No testnet payment has occurred in this path.
+
+This is the fastest way to evaluate **SDK behavior and product UX**; it is **not** proof of a funded transaction.
+
+### B. Real Zcash testnet — real view-only observation
+
+1. Open the **[Vercel checkout](https://zcash-payment-sessions.vercel.app/checkout)** in a browser that supports cross-origin isolation. Select **Real testnet**.
+2. Use a **dedicated testnet wallet** capable of exporting a Unified Full Viewing Key (UFVK). Enter its **viewing key** and **wallet birthday height**. Never enter a seed, mnemonic, or spending key.
+3. Keep the preconfigured **testnet gRPC-Web gateway**, or choose a compatible endpoint under the advanced connection settings.
+4. **Connect view-only wallet**; on first use, initialization and scanning can take time. Optionally protect the viewing profile with a passphrase of at least 12 characters for later local unlock.
+5. Create the request. The QR encodes the original ZIP-321 payment URI; **a QR is a request, not payment evidence**.
+6. A **separate funded testnet sender** must actually pay the request. Refresh the merchant view to observe the chain and advance the session as verified evidence becomes available.
+
+A returning merchant can unlock the previously encrypted viewing profile in the **same browser profile**. The WebZjs working wallet database remains **volatile**; returning may require another scan. Customers do **not** provide a viewing key: they scan the merchant's request with a compatible wallet.
+
+**Browser note:** WebZjs requires `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`, WASM workers, and `SharedArrayBuffer`. The Vercel checkout serves these headers; interfering browser extensions or an environment without isolation can disable real testnet mode. GitHub Pages is a **simulation-only fallback** because those required headers are unavailable there.
+
+## Independent evidence, not simulated claims
+
+| Evidence | What it establishes | What it does **not** establish |
+| --- | --- | --- |
+| [Historical on-chain payment](LIVE_TESTNET_PROOF.md) | A real funded testnet transaction, local current-consensus Sapling memo recovery, exact matching, confirmation progression to `PAID`, reload survival, and second-session replay rejection | A newly funded payment through the present Vercel checkout |
+| [Browser real-testnet integration](.github/workflows/verify-live-testnet-checkout.yml) | Real view-only WebZjs wallet initialization, ZIP-321 request/QR generation, gateway sync, and merchant profile unlock/reload | A signed or broadcast payment |
+| [Merchant and security checks](.github/workflows/verify-merchant-integration.yml) | The real browser onboarding, request, sync and storage behavior under automated acceptance | Full real-world availability or mainnet readiness |
+| [Unit and adversarial tests](tests/) | Payment state transitions, malformed inputs, replay races, expiry, reorg handling and SDK integration | A public hosted backend or custody service |
+
+**Recorded funded testnet proof (October 11, 2026)**
+
+| Field | Observed value |
+| --- | --- |
+| Amount | **10,000 zatoshis** (0.0001 testnet ZEC / TAZ) |
+| Canonical transaction ID | [`81c9ae83cede34ca8b47cac1f60c7327651173fdf2c97a1af908561b126c7cfc`](LIVE_TESTNET_PROOF.md) |
+| Block | `4,490,144` |
+| Confirmations at observation | `90` |
+| Session | `50fd77e4-34bd-4508-b651-578e14f121cb` |
+| SDK lifecycle | `AWAITING_PAYMENT → DETECTED → CONFIRMING → PAID` |
+| Repeated-credit attempt | `ALREADY_CONSUMED` for the same output on another session |
+
+The [proof record](LIVE_TESTNET_PROOF.md) includes the request, memo, transaction identity, recorded browser/adapter compatibility findings, reload evidence, and the difference between canonical and raw transaction ID byte order.
+
+## SDK integration
+
+The SDK is an ESM TypeScript package with its public entrypoint in [`src/index.ts`](src/index.ts). It is designed to be embedded into an existing Zcash application; it does **not** create spending keys, manage customer payments, or supply a hosted wallet account.
 
 ```ts
 import { ZcashPaymentSessions } from "zcash-payment-sessions";
 
+// Supply your own compatible view-only wallet and storage implementation.
+// For crediting, storage.claimItem(key, sessionId) MUST be atomic.
 const sdk = await ZcashPaymentSessions.create({
   storage: paymentStorage,
-  recipientAddress: "ztestsapling1...",
   wallet: webzjsWallet,
-  accountId: 1,
+  accountId: 0,
+  recipientAddress: "ztestsapling1...", // replace with your real testnet recipient
   requiredConfirmations: 2
 });
 
 const session = await sdk.createSession({
   amountZatoshis: 10_000n,
   memo: "order-123",
-  expiresInMs: 2 * 60 * 60 * 1000
+  expiresInMs: 20 * 60 * 1000
 });
 
-console.log(session.paymentUri); // render as a QR or copyable ZIP-321 URI
+// Present session.paymentUri as a QR code or a copyable ZIP-321 URI.
+// After synchronizing the wallet and receiving an external payment:
 const result = await sdk.refresh(session.id);
 console.log(result.session?.status, result.observation.outcome);
 ```
 
-Payment matching is fail-closed unless `storage` implements the optional asynchronous
-`claimItem(key, owner)` operation. It must atomically claim a consumed-payment key and return the
-existing owner when another writer already claimed it. The reference checkout implements this with
-same-origin Web Locks; a server or multi-device deployment should use a shared transactional
-database. Plain `localStorage` remains suitable for session metadata and request URIs, but the SDK
-returns `CONCURRENCY_UNSUPPORTED` instead of crediting a payment when no atomic claim capability
-is available.
+`paymentStorage` and `webzjsWallet` are intentionally application-supplied objects, not built-in globals. The [reference checkout](examples/checkout/src/main.ts) provides a complete browser adapter and controller showing how to wire them up.
 
-The public surface also exports `WebZjsBrowserWallet`, `createSaplingMemoHydrator`,
-`decodeZip321Uri`, `proposeZip321Transfer`, and the public observation/session types.
+### The atomic storage rule
 
-## Architecture
+For **payment crediting**, `storage` must implement `claimItem(key, owner)` with a single atomic claim: return `null` when this writer wins or the **existing owner's ID** when already claimed. It may return a promise. A non-atomic check-then-set is unsafe.
+
+- **One browser origin / multiple tabs:** the reference implementation uses **Web Locks** with same-origin browser storage.
+- **Multiple devices / server workers:** use a **shared transactional datastore** with a uniqueness constraint or equivalent atomic primitive.
+- **No atomic claim capability:** ZPS returns `CONCURRENCY_UNSUPPORTED` rather than crediting an output.
+
+Read [`src/storage.ts`](src/storage.ts), [`src/monitor.ts`](src/monitor.ts) and [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) for the exact contract and failure modes.
+
+### Architecture
 
 ```mermaid
 flowchart LR
-  App[Browser checkout or merchant app] --> SDK[ZcashPaymentSessions facade]
-  SDK --> ZIP[WebZjs requests WASM\nZIP-321 URI]
-  SDK --> Store[Persistent session + consumed ledger]
-  SDK --> Monitor[Exact matcher + confirmations]
-  Monitor --> Source[WebZjs received-payment adapter]
-  Source --> Wallet[WebZjsBrowserWallet]
-  Wallet --> DB[Serialized wallet database]
-  Wallet --> Transport[Browser gRPC-Web lightwalletd endpoint]
-  Source -. missing V6 memo .-> Hydrator[Local current-consensus\nSapling memo hydrator]
+  UI["Merchant checkout / application"] --> SDK["ZPS TypeScript facade"]
+  SDK --> REQUEST["WebZjs ZIP-321 WASM"]
+  SDK --> STORE["Sessions and consumed-output ledger"]
+  SDK --> MON["Exact observation matcher"]
+  MON --> SOURCE["WebZjs received payments"]
+  SOURCE --> VIEW["View-only WebZjs browser wallet"]
+  VIEW --> RPC["Zcash testnet via gRPC-Web"]
+  SOURCE --> HYD["Sapling memo hydrator / Rust WASM"]
+  HYD --> MON
+  MON --> STATE["Confirmed state and evidence receipt"]
 ```
 
-## Judge-first links
+**Why the separate hydrator?** The pinned WebZjs wallet parser cannot decode all current-consensus V6 transaction formats, so compact observations may omit the Sapling memo needed for correlation. The [Rust/WASM hydrator](wasm/sapling-memo-hydrator/) processes full transaction bytes locally, and binds its result back to the correct transaction, output, recipient and value. This is an **explicit compatibility layer**, not a claim that WebZjs supports every current Zcash transaction format. [More detail](docs/THREAT_MODEL.md#consensus-compatibility).
 
-- [Public GitHub repository](https://github.com/Iniwura/zcash-payment-sessions)
-- [Interactive checkout and product site (Vercel)](https://zcash-payment-sessions.vercel.app/)
-- [Fallback reference checkout (GitHub Pages)](https://iniwura.github.io/zcash-payment-sessions/)
-- [Live testnet proof](LIVE_TESTNET_PROOF.md)
-- [Threat model and limitations](docs/THREAT_MODEL.md)
-- [Three-minute reviewer guide](docs/REVIEWER_GUIDE.md)
-- [Reference checkout source](examples/checkout)
+## Repository guide
 
-On the isolated Vercel deployment, the checkout opens in **Real testnet** mode. Connect a
-dedicated Zcash testnet view-only wallet using its UFVK and account birthday, then create a
-ZIP-321 request and sync to observe real chain data. The public Render gRPC-Web gateway is
-preconfigured; a real payment still requires a funded sender and live verification. No seed,
-spending key, or private key is accepted. The separate **Developer simulation** mode exercises
-lifecycle states without sending any funds.
+```text
+src/                      Public SDK, wallet adapter, matcher, session and storage
+tests/                    Unit, integration, adversarial and compatibility tests
+examples/checkout/        Vercel reference checkout, wallet onboarding, QR, receipts and tour
+wasm/sapling-memo-hydrator/  Rust current-consensus Sapling evidence module
+gateway/                  Optional free testnet gRPC-Web / Envoy proxy
+patches/                  Auditable compatibility patches for pinned WebZjs
+scripts/                  Reproducible builds, smoke checks and testnet utilities
+docs/                     Reviewer walkthrough, security model and technical records
+.github/workflows/        Build, security, live-testnet and deployment verification
+LIVE_TESTNET_PROOF.md     Recorded real testnet payment evidence
+```
 
-The public GitHub Pages build cannot provide COOP/COEP headers, so it keeps deterministic simulation
-fully enabled and gates Real testnet mode. Real testnet mode remains available from a self-hosted
-deployment with those headers; see the [verified live testnet proof](LIVE_TESTNET_PROOF.md).
+### Reproducible setup
 
-## Reproducible WebZjs setup
+This source tree intentionally does **not** commit generated WebZjs/WASM packages or secrets. The bootstrapping script checks out **ChainSafe/WebZjs at `a50df944c32243cb8da9f86e7d52cb65ac926439`**, applies the three [tracked compatibility patches](patches/), builds the required packages, and installs dependencies.
 
-The repository does not depend on a sibling checkout or on published WebZjs packages. The
-bootstrap script creates an ignored `.deps/WebZjs` checkout at the exact pinned commit, applies
-the tracked compatibility patches, builds only `webzjs-keys`, `webzjs-requests`, and
-`webzjs-wallet`, verifies the generated package names and versions, and installs the local
-runtime packages with `npm ci`.
-
-Prerequisites:
-
-- Node.js `22.12.0` or newer (the current Vitest release requires Node 22.12+, 24.x, or 26.x)
-- npm
-- Git
-- `clang`
-- `just`
-- `wasm-pack`
-- `rustup` and `cargo`
-- Rust nightly `nightly-2025-01-07` with `wasm32-unknown-unknown` and `rust-src`
-- Rust stable `1.89.0` with `wasm32-unknown-unknown` for the current-consensus hydrator
-
-The script never changes the global Rust default and never invokes `sudo`. If a prerequisite is
-missing, it stops with the exact local installation command to run.
-
-From a clean clone:
+**Prerequisites:** Node.js 24.x recommended (22.12+ supported), npm, Git, clang, Rust/Cargo, `just`, `wasm-pack`, Rust `nightly-2025-01-07` with `rust-src` / `wasm32-unknown-unknown`, and stable Rust 1.89 with the WASM target for the hydrator. The bootstrap script checks prerequisites without silently installing system tools or changing the global Rust default.
 
 ```sh
+git clone https://github.com/Iniwura/zcash-payment-sessions.git
+cd zcash-payment-sessions
+
 npm run bootstrap:webzjs
-```
+bash scripts/build-sapling-memo-hydrator.sh
 
-The source patches are [patches/webzjs-wallet-received-payments.patch](patches/webzjs-wallet-received-payments.patch)
-and [patches/webzjs-wallet-memo-transfer.patch](patches/webzjs-wallet-memo-transfer.patch), plus
-[patches/webzjs-wallet-raw-transaction.patch](patches/webzjs-wallet-raw-transaction.patch). The
-first adds the exact received-output API needed by the payment matcher. The second adds only the
-testnet proof tooling's `propose_transfer_with_memo` method; the stock WebZjs
-`propose_transfer` method remains memo-less. The ZIP-321 sender adapter parses the URI with the
-generated requests package and passes the exact memo bytes to that additive method. The pinned
-WebZjs checkout remains untracked and disposable. Generated WASM artifacts are intentionally not
-committed.
-
-When compact WebZjs observations do not contain a memo because the pinned transaction parser
-cannot decode a newer consensus transaction, the public adapter can be given
-`createSaplingMemoHydrator(...)`. It fetches complete bytes through WebZjs `get_transaction` and
-uses the separately built browser-compatible `wasm/sapling-memo-hydrator` module. The hydrator is
-opt-in, performs no transaction parsing in TypeScript, and only returns evidence after exact
-transaction/output/value checks. Build it with `bash scripts/build-sapling-memo-hydrator.sh`;
-it uses stable Rust 1.89 and the current-consensus librustzcash revision recorded in its manifest.
-See [LIVE_TESTNET_PROOF.md](LIVE_TESTNET_PROOF.md) for the verified V6 testnet evidence and the
-expired-session outcome.
-
-To verify the checkout without rebuilding it:
-
-```sh
-npm run verify:reproducibility
-```
-
-The generated developer-only keys package is `@chainsafe/webzjs-keys@0.1.0`. The generic helper
-`scripts/derive-testnet-ufvk.mjs` uses Node OS randomness for a caller-provided 32-byte seed file,
-constructs the pinned WebZjs testnet key API, and prints only the resulting `uview...` UFVK:
-
-```sh
-node scripts/derive-testnet-ufvk.mjs <path-to-testnet-seed.bin>
-```
-
-It never calls WebZjs `generate_seed_phrase()` and is not a runtime dependency of the checkout.
-Keep any testnet seed outside the repository with restrictive permissions.
-
-## Development
-
-```sh
+npm run typecheck
 npm run build
 npm test
-npm run typecheck
 npm run test:consumer
-```
-
-The package facade is emitted to `dist/` and is exposed through the package `exports` map. The
-consumer smoke test imports the built package by name, matching third-party consumption rather
-than importing source internals.
-
-## Reference checkout
-
-The repository includes a small browser checkout at `examples/checkout`. It is deliberately
-frontend-only: the checkout controller imports the package facade, creates a ZIP-321 URI, passes
-that exact URI to the maintained `qr` encoder, and renders the payment-session state machine.
-
-```mermaid
-flowchart LR
-  UI[Checkout reference UI] --> SDK[ZcashPaymentSessions public facade]
-  SDK --> ZIP[WebZjs requests WASM\nZIP-321]
-  SDK --> STORE[Session storage]
-  SDK --> MATCH[Payment monitor]
-  MATCH --> SIM[Deterministic simulated wallet]
-  MATCH --> WALLET[WebZjsBrowserWallet]
-  WALLET --> WDB[Serialized WebZjs wallet DB]
-  WALLET --> LWD[Browser-compatible testnet gRPC-web endpoint]
-```
-
-Prepare and build the reference app from a clean checkout:
-
-```sh
-npm run bootstrap:webzjs
-npm ci
-npm run build
+npm run verify:reproducibility
 npm run demo:typecheck
 npm run demo:build
+```
+
+To inspect the local reference app:
+
+```sh
 npm run demo:dev
 ```
 
-The default mode on a cross-origin-isolated Vercel deployment is real TESTNET; Developer simulation remains a separate, optional demonstration.
-It requires a view-only UFVK and wallet birthday before a request can be created. On GitHub
-Pages, where COOP/COEP headers are unavailable, real mode is gated and Developer simulation
-is selected instead. Simulation demonstrates detection, confirmation progression,
-duplicate refreshes, ambiguity, reorg, expiry, QR rendering and restoration without funds.
+The build and test commands use the pinned WebZjs dependencies built by the bootstrap step. Running `npm ci` alone before those local dependencies exist is insufficient for a clean clone. For instructions on the Render gateway, see [`gateway/README.md`](gateway/README.md).
 
-Real mode is testnet-only. The reference app defaults to
-`https://zps-testnet-gateway.onrender.com`, a free Envoy gRPC-Web gateway to a public
-testnet lightwalletd server. It can be overridden with another verified browser-compatible
-proxy. The gateway can sleep while idle and is not guaranteed to be continuously available. A raw lightwalletd gRPC endpoint is not
-interchangeable with the browser gRPC-web transport. The first view-only account import requires a
-user-provided testnet UFVK and an explicit account birthday height; no birthday is invented and no
-full-chain scan is started implicitly. The imported view-only wallet database is serialized
-through WebZjs `db_to_bytes()` and stored under a separate browser-storage key; the UFVK input is
-cleared after the wallet is opened, including initialization failures. No seed or private key
-is accepted or logged. A UFVK can reveal payment history and must be treated as private viewing
-material; use a dedicated testnet-only wallet.
+### Automated release evidence
 
-The browser adapter uses only the generated WebZjs public package. On first open it initializes
-the generated wallet WASM and its worker pool once, restores the serialized database if present,
-and exposes sync, current-address, view-only-account, and received-payment operations. The
-generated package is `@chainsafe/webzjs-wallet@0.1.0`; ZIP-321 generation comes from the pinned
-`@chainsafe/webzjs-requests@0.1.0` package. Both packages are built locally from the pinned
-WebZjs commit and remain ignored build artifacts.
+Source and docs are tracked in `main`. Compiled deployable frontend assets are assembled by [`deploy-demo.yml`](.github/workflows/deploy-demo.yml) and published to a separate generated `vercel-static` branch. Direct Vercel source builds are intentionally skipped. The release pipeline checks the SDK, consumer import, browser checkout, real view-only wallet synchronization, and public asset integrity. Inspect the [Actions history](https://github.com/Iniwura/zcash-payment-sessions/actions) for the exact commit and results.
 
-The Vite dev and preview servers send `Cross-Origin-Opener-Policy: same-origin` and
-`Cross-Origin-Embedder-Policy: require-corp`. These headers are required for the generated WebZjs
-worker pool and `SharedArrayBuffer`; without them the browser wallet cannot initialize.
+## Privacy, security and limits
 
-The public checkout supports real testnet sync. An earlier transaction completed the payment lifecycle through the SDK, but the deployed browser has not been shown completing a newly funded checkout session. Real testnet observation requires a testnet viewing key, a verified endpoint, and a funded external sender. The browser wallet adapter requires HTTPS endpoints except for localhost development, persists an explicit selected account id, and does not report successful sync when the wallet summary fails.
+**Noncustodial by design.** ZPS does not request or use seeds, spending keys or mnemonics. The reference wallet accepts a **view-only testnet UFVK**, which is still sensitive because it reveals activity. Trial decryption for Sapling memo evidence happens locally. Payment sessions and correlation memos are application metadata and should be stored with appropriate privacy controls.
 
-## License
+**Optional encrypted profile.** If enabled, the merchant's viewing profile is encrypted locally using PBKDF2-SHA256 and AES-256-GCM, protected by a user-supplied passphrase. The active WebZjs working database is **volatile**, not a plaintext persistent database. Unlock may require a rescan. There is no account recovery service.
 
-MIT. See [LICENSE](LICENSE).
+**Transport is not a trust oracle.** The free public testnet Envoy gateway translates browser gRPC-Web to the upstream lightwalletd endpoint. It can cold-start, has free-tier limits, and can learn which transaction is requested during full-transaction hydration. For stronger privacy or reliability, connect to a trusted or self-hosted endpoint. Arbitrary HTTPS does not imply an honest Zcash server.
 
-## Experimental public testnet transport
+**What this project is not:**
 
-The free testnet gRPC-Web gateway at `https://zps-testnet-gateway.onrender.com` has returned a successful `GetLightdInfo` response and the full historical shielded transaction at block `4490144`. A real browser also opened an ephemeral view-only testnet account, created a valid ZIP-321 request, and synchronized through the gateway. **These tests do not replace a new funded payment proof in the public checkout.** The checkout's experimental real testnet mode pre-fills this endpoint and loads the isolated current-consensus Sapling memo WASM from the same origin.
+- Not a mainnet-ready custodial processor, wallet, signing service or automatic background payment watcher.
+- Not a push-payment or transaction broadcasting service: the customer uses an external wallet.
+- Not a production cross-device settlement ledger: the reference checkout's atomic claims cover **same-origin tabs**, not independent devices.
+- Not a claim of newly funded end-to-end **public Vercel checkout** settlement; our historic real payment is documented separately.
+- Not an invisible chain indexer: real mode requires a merchant's view-only wallet, explicit birthday height, and manual refresh in an active browser.
+- Not a general solution to browser compromise, dishonest upstream RPC services, or leakage of viewing metadata.
 
-To build this browser checkout locally, build both WebZjs and the hydrator first:
+The browser deployment uses COOP/COEP and CSP compatible with WebZjs, including `'unsafe-eval'` in `script-src` because the current worker bundle needs it. This is a deliberate compatibility/security trade-off for the experimental testnet reference, not a recommended universal production CSP. The [threat model](docs/THREAT_MODEL.md) explains the full boundary.
 
-```sh
-npm run bootstrap:webzjs
-bash scripts/build-sapling-memo-hydrator.sh
-npm run demo:build
-```
+## Roadmap
 
-Initial wallet setup requires a testnet UFVK so the memo hydrator can decrypt Sapling outputs locally. An optional encrypted merchant profile can restore that view-only configuration after reload without storing the UFVK in plaintext; otherwise the UFVK must be provided again. The checkout does not persist an additional plaintext UFVK; the underlying view-only wallet database remains in local browser storage. A viewing key grants access to payment information, so use a dedicated throwaway testnet account. Never enter a spending key or mainnet viewing key. A correct real-payment lifecycle and memo matching still require live transaction verification; they are **not yet established by the public gateway test**.
+The natural next integrations are a documented adapter for a shared transactional backend, more convenient standards-based merchant wallet provisioning, richer real-testnet observability, and a production transport/privacy review. Those are **future work**, not features claimed to exist today.
 
-## Merchant-first wallet onboarding (feature branch)
+## License and attribution
 
-The checkout supports a merchant-specific, **optional encrypted viewing profile**. The merchant connects a testnet Unified Full Viewing Key and birthday once. If they provide a separate passphrase (minimum 12 characters), the view-only key and gateway settings are encrypted locally with Web Crypto PBKDF2-SHA256 (310,000 iterations) and AES-256-GCM, then stored as ciphertext in that browser. On return, the merchant unlocks that locally encrypted profile with their passphrase; the WebZjs view-only wallet database lives in **volatile browser memory**, while payment-session metadata is stored separately. This prevents the serialized WebZjs database (which can contain viewing material) from being saved unencrypted in localStorage. Unlocking after a page reload recreates the wallet from the saved encrypted viewing key and birthday and may require rescanning blocks. No spending key, seed or mnemonic is accepted. Passphrase recovery is unavailable, and a compromised browser can still expose viewing data while unlocked. Older deployments may already have `wallet:testnet:db` in browser localStorage; users should remove that legacy item manually before treating their local storage as private.
+**MIT licensed.** See [LICENSE](LICENSE). The project uses [ChainSafe WebZjs](https://github.com/ChainSafe/WebZjs) via a **pinned source checkout and explicit local patches**; the current-consensus Sapling hydrator is built separately from its Rust sources. Refer to individual dependencies for their licenses and upstream provenance.
 
-This is **not** a standard Zcash injected-wallet integration and not server-side monitoring. The customer only needs to scan or follow the ZIP-321 payment URI. The reference merchant tab must remain open for manual refresh and on-chain observations. A separate signed payment from an external testnet wallet remains necessary to establish new live checkout settlement. Cross-tab payment claims use Web Locks where available; stronger cross-device or server-side settlement requires a shared transactional ledger.
+---
+
+**The central promise is narrow and testable:** given a ZIP-321 request and trustworthy received-payment evidence, applications can turn shielded Zcash payments into persistent, exact, replay-aware session outcomes instead of inferring success from a QR code or a transaction hash.
