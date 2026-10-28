@@ -22,18 +22,46 @@ export interface ObservedPayment {
   pool: string;
 }
 
+export type PaymentObservationIssueKind =
+  | "UPSTREAM_UNAVAILABLE"
+  | "HYDRATION_UNAVAILABLE"
+  | "INCOMPLETE_METADATA"
+  | "INVALID_OBSERVATION"
+  | "CONFLICTING_OBSERVATIONS"
+  | "CLAIM_UNAVAILABLE";
+
+export interface PaymentObservationIssue {
+  kind: PaymentObservationIssueKind;
+  paymentId?: string;
+}
+
+export interface PaymentObservationBatch {
+  payments: readonly ObservedPayment[];
+  issues?: readonly PaymentObservationIssue[] | undefined;
+}
+
+export type PaymentObservationInput =
+  | readonly ObservedPayment[]
+  | PaymentObservationBatch;
+
 export type PaymentMatchOutcome =
   | "NO_MATCH"
   | "EXACT"
   | "AMBIGUOUS"
   | "ALREADY_CONSUMED"
-  | "REORGED";
+  | "REORGED"
+  | "TEMPORARILY_UNAVAILABLE"
+  | "INCOMPLETE"
+  | "MISMATCH"
+  | "CONFLICTING"
+  | "CONCURRENCY_UNSUPPORTED";
 
 export interface PaymentObservationResult {
   outcome: PaymentMatchOutcome;
   payment?: ObservedPayment;
   candidates?: readonly ObservedPayment[];
   consumedBySessionId?: string;
+  issues?: readonly PaymentObservationIssue[] | undefined;
 }
 
 interface PersistedPaymentMatch {
@@ -74,10 +102,10 @@ export class PaymentMonitor {
     }
   }
 
-  observe(
+  async observe(
     sessionId: string,
-    observations: readonly ObservedPayment[]
-  ): PaymentObservationResult {
+    input: PaymentObservationInput
+  ): Promise<PaymentObservationResult> {
     const loaded = this.sessions.load(sessionId);
 
     if (loaded === null || loaded.status === "EXPIRED") {
@@ -91,17 +119,20 @@ export class PaymentMonitor {
       return { outcome: "NO_MATCH" };
     }
 
+    const { observations, issues } = prepareObservations(input);
     const existing = this.loadMatch(session.id);
 
     if (existing !== null) {
-      return this.updateExistingMatch(session, existing, observations);
+      return this.updateExistingMatch(
+        session,
+        existing,
+        observations,
+        issues
+      );
     }
 
-    if (
-      session.status === "PAID" ||
-      session.status === "AMBIGUOUS"
-    ) {
-      return { outcome: "NO_MATCH" };
+    if (session.status === "PAID" || session.status === "AMBIGUOUS") {
+      return { outcome: "NO_MATCH", issues: issuesIfPresent(issues) };
     }
 
     const matching = observations.filter(
@@ -112,17 +143,23 @@ export class PaymentMonitor {
         candidate.memo === session.memo
     );
 
-    const available = matching.filter((candidate) => {
-      const consumed = this.loadConsumed(candidate.paymentId);
-      return consumed === null || consumed === session.id;
-    });
+    const available = await this.availableForSession(
+      matching,
+      session.id
+    );
 
     if (available.length > 1) {
-      return { outcome: "AMBIGUOUS", candidates: available };
+      return {
+        outcome: "AMBIGUOUS",
+        candidates: available,
+        issues: issuesIfPresent(issues)
+      };
     }
 
     if (available.length === 0) {
-      const consumed = matching[0];
+      const consumed = matching.find((candidate) =>
+        this.loadConsumed(candidate.paymentId) !== null
+      );
       const consumedBySessionId =
         consumed === undefined
           ? undefined
@@ -131,28 +168,41 @@ export class PaymentMonitor {
       if (consumedBySessionId !== null && consumedBySessionId !== undefined) {
         return {
           outcome: "ALREADY_CONSUMED",
-          payment: consumed!,
-          consumedBySessionId
+          ...(consumed === undefined ? {} : { payment: consumed }),
+          consumedBySessionId,
+          issues: issuesIfPresent(issues)
         };
       }
 
-      return { outcome: "NO_MATCH" };
+      return matching.length === 0
+        ? issueOutcome(issues)
+        : { outcome: "NO_MATCH", issues: issuesIfPresent(issues) };
     }
 
     const candidate = available[0]!;
-    const consumedBySessionId = this.claim(
-      candidate.paymentId,
-      session.id
-    );
+    const claim = await this.claim(candidate.paymentId, session.id);
 
-    if (
-      consumedBySessionId !== null &&
-      consumedBySessionId !== session.id
-    ) {
+    if (claim === "unsupported") {
+      return {
+        outcome: "CONCURRENCY_UNSUPPORTED",
+        payment: candidate,
+        issues: [{ kind: "CLAIM_UNAVAILABLE" }]
+      };
+    }
+
+    if (claim === "unavailable") {
+      return {
+        outcome: "TEMPORARILY_UNAVAILABLE",
+        payment: candidate,
+        issues: [{ kind: "CLAIM_UNAVAILABLE" }]
+      };
+    }
+
+    if (typeof claim === "string" && claim !== session.id) {
       return {
         outcome: "ALREADY_CONSUMED",
         payment: candidate,
-        consumedBySessionId
+        consumedBySessionId: claim
       };
     }
 
@@ -168,31 +218,72 @@ export class PaymentMonitor {
     return { outcome: "EXACT", payment: candidate };
   }
 
-  private updateExistingMatch(
-    session: ReturnType<PaymentSessionStore["load"]> & object,
+  private async updateExistingMatch(
+    session: NonNullable<ReturnType<PaymentSessionStore["load"]>>,
     existing: PersistedPaymentMatch,
-    observations: readonly ObservedPayment[]
-  ): PaymentObservationResult {
+    observations: readonly ObservedPayment[],
+    issues: readonly PaymentObservationIssue[]
+  ): Promise<PaymentObservationResult> {
+    const conflicting = issueForPayment(
+      issues,
+      existing.paymentId,
+      "CONFLICTING_OBSERVATIONS"
+    );
+    if (conflicting !== undefined) {
+      return {
+        outcome: "CONFLICTING",
+        issues: [conflicting]
+      };
+    }
+
     const candidate = observations.find(
       (payment) => payment.paymentId === existing.paymentId
     );
 
+    if (candidate === undefined) {
+      if (session.status === "REORGED") {
+        return this.recoverAfterReorg(session, observations, issues);
+      }
+
+      return issueOutcome(issues, "INCOMPLETE");
+    }
+
     if (
-      candidate === undefined ||
       candidate.amountZatoshis !== BigInt(existing.amountZatoshis) ||
       candidate.memo !== existing.memo
     ) {
-      return this.handleReorg(session, existing);
+      const issue = issueForPayment(issues, candidate.paymentId);
+      if (issue !== undefined) {
+        return issueOutcome([issue]);
+      }
+
+      return {
+        outcome: "MISMATCH",
+        payment: candidate
+      };
+    }
+
+    if (candidate.status === "REORGED") {
+      if (session.status !== "CONFIRMING" && session.status !== "PAID") {
+        return { outcome: "REORGED", payment: candidate };
+      }
+
+      const reorged = this.markReorged(session, candidate);
+      const recovery = await this.recoverAfterReorg(
+        reorged,
+        observations,
+        issues
+      );
+      return recovery.outcome === "NO_MATCH"
+        ? { outcome: "REORGED", payment: candidate }
+        : recovery;
+    }
+
+    if (candidate.status === "EXPIRED") {
+      return { outcome: "MISMATCH", payment: candidate };
     }
 
     this.saveMatch(session, candidate);
-
-    if (
-      candidate.status === "REORGED" ||
-      candidate.status === "EXPIRED"
-    ) {
-      return this.handleReorg(session, existing, candidate);
-    }
 
     if (session.status === "REORGED") {
       const detected = transitionPaymentSession(
@@ -223,37 +314,96 @@ export class PaymentMonitor {
     return { outcome: "EXACT", payment: candidate };
   }
 
-  private handleReorg(
+  private markReorged(
     session: NonNullable<ReturnType<PaymentSessionStore["load"]>>,
-    existing: PersistedPaymentMatch,
-    payment?: ObservedPayment
-  ): PaymentObservationResult {
-    if (
-      session.status === "CONFIRMING" ||
-      session.status === "PAID"
-    ) {
-      const reorged = transitionPaymentSession(session, "REORGED");
-      this.saveMatch(
-        reorged,
-        payment ?? {
-          paymentId: existing.paymentId,
-          txid: existing.paymentId.split(":")[0] ?? existing.paymentId,
-          amountZatoshis: BigInt(existing.amountZatoshis),
-          memo: existing.memo,
-          confirmations: 0,
-          status: "REORGED",
-          pool: "unknown"
-        }
-      );
-      this.sessions.save(reorged);
-      return payment === undefined
-        ? { outcome: "REORGED" }
-        : { outcome: "REORGED", payment };
+    payment: ObservedPayment
+  ): NonNullable<ReturnType<PaymentSessionStore["load"]>> {
+    if (session.status !== "CONFIRMING" && session.status !== "PAID") {
+      return session;
     }
 
-    return payment === undefined
-      ? { outcome: "NO_MATCH" }
-      : { outcome: "NO_MATCH", payment };
+    const reorged = transitionPaymentSession(session, "REORGED");
+    this.saveMatch(reorged, payment);
+    this.sessions.save(reorged);
+    return reorged;
+  }
+
+  private async recoverAfterReorg(
+    session: NonNullable<ReturnType<PaymentSessionStore["load"]>>,
+    observations: readonly ObservedPayment[],
+    issues: readonly PaymentObservationIssue[]
+  ): Promise<PaymentObservationResult> {
+    const matching = observations.filter(
+      (candidate) =>
+        candidate.status !== "EXPIRED" &&
+        candidate.status !== "REORGED" &&
+        candidate.amountZatoshis === session.amountZatoshis &&
+        candidate.memo === session.memo
+    );
+    const available = await this.availableForSession(
+      matching,
+      session.id
+    );
+
+    if (available.length > 1) {
+      return {
+        outcome: "AMBIGUOUS",
+        candidates: available,
+        issues: issuesIfPresent(issues)
+      };
+    }
+
+    if (available.length === 0) {
+      return issueOutcome(issues);
+    }
+
+    const candidate = available[0]!;
+    const claim = await this.claim(candidate.paymentId, session.id);
+
+    if (claim === "unsupported") {
+      return {
+        outcome: "CONCURRENCY_UNSUPPORTED",
+        payment: candidate,
+        issues: [{ kind: "CLAIM_UNAVAILABLE" }]
+      };
+    }
+
+    if (claim === "unavailable") {
+      return {
+        outcome: "TEMPORARILY_UNAVAILABLE",
+        payment: candidate,
+        issues: [{ kind: "CLAIM_UNAVAILABLE" }]
+      };
+    }
+
+    if (typeof claim === "string" && claim !== session.id) {
+      return {
+        outcome: "ALREADY_CONSUMED",
+        payment: candidate,
+        consumedBySessionId: claim
+      };
+    }
+
+    this.saveMatch(session, candidate);
+    const detected = transitionPaymentSession(session, "DETECTED");
+    this.sessions.save(detected);
+    return { outcome: "EXACT", payment: candidate };
+  }
+
+  private async availableForSession(
+    matching: readonly ObservedPayment[],
+    sessionId: string
+  ): Promise<ObservedPayment[]> {
+    const available: ObservedPayment[] = [];
+
+    for (const candidate of matching) {
+      const consumed = this.loadConsumed(candidate.paymentId);
+      if (consumed === null || consumed === sessionId) {
+        available.push(candidate);
+      }
+    }
+
+    return available;
   }
 
   private matchKey(sessionId: string): string {
@@ -265,13 +415,23 @@ export class PaymentMonitor {
   }
 
   private loadMatch(sessionId: string): PersistedPaymentMatch | null {
-    const encoded = this.storage.getItem(this.matchKey(sessionId));
+    const key = this.matchKey(sessionId);
+    const encoded = this.storage.getItem(key);
 
     if (encoded === null) {
       return null;
     }
 
-    return JSON.parse(encoded) as PersistedPaymentMatch;
+    try {
+      const parsed: unknown = JSON.parse(encoded);
+      if (!isPersistedPaymentMatch(parsed)) {
+        throw new Error("Invalid persisted payment match");
+      }
+      return parsed;
+    } catch {
+      this.storage.removeItem(key);
+      return null;
+    }
   }
 
   private saveMatch(
@@ -298,20 +458,158 @@ export class PaymentMonitor {
     return this.storage.getItem(this.consumedKey(paymentId));
   }
 
-  private claim(
+  private async claim(
     paymentId: string,
     sessionId: string
-  ): string | null {
-    const consumedBySessionId = this.loadConsumed(paymentId);
+  ): Promise<string | null | "unsupported" | "unavailable"> {
+    if (this.storage.claimItem === undefined) {
+      return "unsupported";
+    }
 
-    if (consumedBySessionId === null) {
-      this.storage.setItem(
+    try {
+      return await this.storage.claimItem(
         this.consumedKey(paymentId),
         sessionId
       );
-      return null;
+    } catch {
+      return "unavailable";
+    }
+  }
+}
+
+function prepareObservations(
+  input: PaymentObservationInput
+): {
+  observations: readonly ObservedPayment[];
+  issues: readonly PaymentObservationIssue[];
+} {
+  const source: PaymentObservationBatch = Array.isArray(input)
+    ? { payments: input, issues: [] }
+    : input as PaymentObservationBatch;
+  const byId = new Map<string, ObservedPayment>();
+  const conflicting = new Set<string>();
+
+  for (const payment of source.payments) {
+    const existing = byId.get(payment.paymentId);
+    if (existing === undefined) {
+      byId.set(payment.paymentId, payment);
+      continue;
     }
 
-    return consumedBySessionId;
+    if (!sameObservation(existing, payment)) {
+      conflicting.add(payment.paymentId);
+    }
   }
+
+  const issues = [
+    ...(source.issues ?? []),
+    ...[...conflicting].map((paymentId) => ({
+      kind: "CONFLICTING_OBSERVATIONS" as const,
+      paymentId
+    }))
+  ];
+
+  return {
+    observations: [...byId]
+      .filter(([paymentId]) => !conflicting.has(paymentId))
+      .map(([, payment]) => payment),
+    issues
+  };
+}
+
+function sameObservation(
+  first: ObservedPayment,
+  second: ObservedPayment
+): boolean {
+  return (
+    first.txid === second.txid &&
+    first.amountZatoshis === second.amountZatoshis &&
+    first.memo === second.memo &&
+    first.blockHeight === second.blockHeight &&
+    first.confirmations === second.confirmations &&
+    first.status === second.status &&
+    first.pool === second.pool
+  );
+}
+
+function issueForPayment(
+  issues: readonly PaymentObservationIssue[],
+  paymentId: string,
+  kind?: PaymentObservationIssueKind
+): PaymentObservationIssue | undefined {
+  return issues.find(
+    (issue) =>
+      (issue.paymentId === undefined || issue.paymentId === paymentId) &&
+      (kind === undefined || issue.kind === kind)
+  );
+}
+
+function issueOutcome(
+  issues: readonly PaymentObservationIssue[],
+  fallback: "INCOMPLETE" | "NO_MATCH" = "NO_MATCH"
+): PaymentObservationResult {
+  if (issues.length === 0) {
+    return { outcome: fallback };
+  }
+
+  if (issues.some((issue) => issue.kind === "CONFLICTING_OBSERVATIONS")) {
+    return { outcome: "CONFLICTING", issues };
+  }
+
+  if (
+    issues.some(
+      (issue) =>
+        issue.kind === "UPSTREAM_UNAVAILABLE" ||
+        issue.kind === "HYDRATION_UNAVAILABLE" ||
+        issue.kind === "CLAIM_UNAVAILABLE"
+    )
+  ) {
+    return { outcome: "TEMPORARILY_UNAVAILABLE", issues };
+  }
+
+  if (
+    issues.some(
+      (issue) =>
+        issue.kind === "INCOMPLETE_METADATA" ||
+        issue.kind === "INVALID_OBSERVATION"
+    )
+  ) {
+    return { outcome: "INCOMPLETE", issues };
+  }
+
+  return { outcome: fallback, issues };
+}
+
+function issuesIfPresent(
+  issues: readonly PaymentObservationIssue[]
+): readonly PaymentObservationIssue[] | undefined {
+  return issues.length === 0 ? undefined : issues;
+}
+
+function isPersistedPaymentMatch(
+  value: unknown
+): value is PersistedPaymentMatch {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const match = value as Partial<PersistedPaymentMatch>;
+  return (
+    match.version === 1 &&
+    typeof match.sessionId === "string" &&
+    match.sessionId.length > 0 &&
+    typeof match.paymentId === "string" &&
+    match.paymentId.length > 0 &&
+    typeof match.amountZatoshis === "string" &&
+    /^\d+$/.test(match.amountZatoshis) &&
+    BigInt(match.amountZatoshis) > 0n &&
+    typeof match.memo === "string" &&
+    Number.isSafeInteger(match.confirmations) &&
+    typeof match.confirmations === "number" &&
+    match.confirmations >= 0 &&
+    (match.status === "MINED" ||
+      match.status === "PENDING" ||
+      match.status === "EXPIRED" ||
+      match.status === "REORGED")
+  );
 }

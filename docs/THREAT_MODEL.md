@@ -15,11 +15,22 @@ session. Its stable payment identity is `txid:pool:output-index`.
 - An expired session being resurrected by a late payment
 - Ambiguous exact candidates being treated as a payment
 - Malformed or incomplete full-transaction bytes being treated as evidence
+- Transient RPC, transport, or memo-hydration failures being treated as reorgs
+- A replacement exact payment being ignored after an explicitly observed reorg
 - Mismatched txid, pool, output index, recipient, or value during memo hydration
 - Losing the consumed-payment ledger across browser reloads
 
-`PAID` is reached only after the configured confirmation threshold. Reorg observations move a
-session back to `REORGED`; they do not silently preserve a stale credit.
+`PAID` is reached only after the configured confirmation threshold. Only an explicit wallet reorg
+observation moves a session back to `REORGED`; missing outputs, stale snapshots, missing memos, and
+hydration/RPC failures preserve the last trusted state and return retryable or incomplete evidence.
+A valid replacement can then recover the session without releasing the old payment's consumed
+ledger entry.
+
+Payment claims require an atomic `claimItem` storage operation. The reference browser checkout
+uses same-origin Web Locks to serialize claims across tabs. The SDK refuses to credit a payment
+when the storage adapter does not provide that capability. Web Locks and browser storage do not
+provide cross-device or durable server transaction guarantees; a shared transactional database is
+required for those deployment models.
 
 ## Privacy boundary
 
@@ -53,5 +64,7 @@ boundary, not a claim that the pinned upstream parser understands every current 
 
 The project does not protect a user from a compromised wallet, compromised browser, malicious
 storage implementation, a dishonest lightwalletd server returning fabricated data, or endpoint
-metadata leakage. Wallet signing and broadcasting remain outside the browser payment-session
-monitor.
+metadata leakage. HTTPS endpoint validation reduces accidental transport misuse but does not make
+an arbitrary lightwalletd proxy trustworthy; applications should allowlist and verify their
+configured chain endpoint. Wallet signing and broadcasting remain outside the browser
+payment-session monitor.

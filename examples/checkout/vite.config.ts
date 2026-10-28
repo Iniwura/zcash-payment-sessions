@@ -18,7 +18,6 @@ const webzjsWalletPackageRoot: Plugin = {
 
 const webzjsWalletBrowserImport: Plugin = {
   name: "webzjs-wallet-browser-import",
-  apply: "serve",
   transform(code, id) {
     if (!id.endsWith("/dist/browser-wallet.js")) return undefined;
 

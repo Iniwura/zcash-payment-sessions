@@ -1,7 +1,9 @@
 import type { WebWallet } from "@chainsafe/webzjs-wallet";
 import type {
   ObservedPayment,
-  ObservedPaymentStatus
+  ObservedPaymentStatus,
+  PaymentObservationIssue,
+  PaymentObservationBatch
 } from "./monitor.js";
 
 export interface WebZjsReceivedPayment {
@@ -115,45 +117,110 @@ export class WebZjsPaymentSource {
   ) {}
 
   async list(): Promise<ObservedPayment[]> {
-    const response = await this.wallet.get_received_payments(
-      this.accountId
-    );
+    const result = await this.listDetailed();
+    return [...result.payments];
+  }
+
+  async listDetailed(): Promise<PaymentObservationBatch> {
+    let response: WebZjsReceivedPaymentResponse;
 
     try {
-      const payments = response.payments
-        .map(normalizeWebZjsReceivedPayment)
-        .filter((payment): payment is WebZjsReceivedPayment => payment !== undefined);
+      response = await this.wallet.get_received_payments(
+        this.accountId
+      );
+    } catch {
+      return {
+        payments: [],
+        issues: [{ kind: "UPSTREAM_UNAVAILABLE" }]
+      };
+    }
+
+    const issues: PaymentObservationIssue[] = [];
+
+    try {
+      const payments = response.payments.flatMap((payment) => {
+        const normalized = normalizeWebZjsReceivedPayment(payment);
+        if (normalized === undefined) {
+          issues.push({
+            kind: "INVALID_OBSERVATION",
+            paymentId: payment.payment_id
+          });
+          return [];
+        }
+        return [normalized];
+      });
       const hydratedPayments = await Promise.all(
         payments.map(async (payment) => {
           if (this.hydrator === undefined || payment.memo !== undefined) {
+            if (payment.memo === undefined) {
+              issues.push({
+                kind: "INCOMPLETE_METADATA",
+                paymentId: payment.payment_id
+              });
+            }
             return payment;
           }
 
           try {
             const evidence = await this.hydrator(payment);
-            return evidence === undefined
-              ? payment
-              : (mergeHydratedReceivedPayment(payment, evidence) ?? payment);
+            if (evidence === undefined) {
+              issues.push({
+                kind: "INCOMPLETE_METADATA",
+                paymentId: payment.payment_id
+              });
+              return payment;
+            }
+
+            const merged = mergeHydratedReceivedPayment(payment, evidence);
+            if (merged === undefined) {
+              issues.push({
+                kind: "INCOMPLETE_METADATA",
+                paymentId: payment.payment_id
+              });
+              return payment;
+            }
+
+            return merged;
           } catch {
+            issues.push({
+              kind: "HYDRATION_UNAVAILABLE",
+              paymentId: payment.payment_id
+            });
             return payment;
           }
         })
       );
 
-      return hydratedPayments.map((payment) => ({
-        paymentId: payment.payment_id,
-        txid: payment.txid,
-        amountZatoshis: payment.value,
-        ...(payment.memo === undefined
-          ? {}
-          : { memo: payment.memo }),
-        ...(payment.block_height === undefined
-          ? {}
-          : { blockHeight: payment.block_height }),
-        confirmations: payment.confirmations,
-        status: mapWebZjsStatus(payment.status),
-        pool: payment.pool
-      }));
+      return {
+        payments: hydratedPayments.flatMap((payment) => {
+          let status: ObservedPaymentStatus;
+          try {
+            status = mapWebZjsStatus(payment.status);
+          } catch {
+            issues.push({
+              kind: "INVALID_OBSERVATION",
+              paymentId: payment.payment_id
+            });
+            return [];
+          }
+
+          return [{
+            paymentId: payment.payment_id,
+            txid: payment.txid,
+            amountZatoshis: payment.value,
+            ...(payment.memo === undefined
+              ? {}
+              : { memo: payment.memo }),
+            ...(payment.block_height === undefined
+              ? {}
+              : { blockHeight: payment.block_height }),
+            confirmations: payment.confirmations,
+            status,
+            pool: payment.pool
+          }];
+        }),
+        issues
+      };
     } finally {
       response.free?.();
     }

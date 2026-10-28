@@ -29,14 +29,25 @@ class MemoryStorage implements KeyValueStorage {
   removeItem(key: string): void {
     this.values.delete(key);
   }
+
+  claimItem(key: string, owner: string): string | null {
+    const existing = this.values.get(key);
+    if (existing !== undefined) return existing;
+    this.values.set(key, owner);
+    return null;
+  }
 }
 
 class FakeWallet implements WebZjsWalletLike {
   payments: WebZjsReceivedPayment[] = [];
+  unavailable = false;
 
   async get_received_payments(
     _accountId: number
   ): Promise<WebZjsReceivedPaymentResponse> {
+    if (this.unavailable) {
+      throw new Error("upstream unavailable");
+    }
     return { payments: this.payments };
   }
 }
@@ -157,6 +168,24 @@ describe("ZcashPaymentSessions public facade", () => {
     wallet.payments = [payment({ confirmations: 2, status: 0 })];
 
     expect((await sessions.refresh(created.id)).session?.status).toBe("PAID");
+  });
+
+  it("does not invalidate a paid session when the wallet transport is unavailable", async () => {
+    const { sessions, wallet } = await setup();
+    const created = await createSession(sessions);
+
+    wallet.payments = [payment()];
+    await sessions.refresh(created.id);
+    wallet.payments = [payment({ confirmations: 1, status: 0 })];
+    await sessions.refresh(created.id);
+    wallet.payments = [payment({ confirmations: 2, status: 0 })];
+    await sessions.refresh(created.id);
+
+    wallet.unavailable = true;
+    const result = await sessions.refresh(created.id);
+
+    expect(result.observation.outcome).toBe("TEMPORARILY_UNAVAILABLE");
+    expect(result.session?.status).toBe("PAID");
   });
 
   it("keeps duplicate refreshes idempotent after PAID", async () => {

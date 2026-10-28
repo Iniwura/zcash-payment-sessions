@@ -16,6 +16,10 @@ A ZIP-321 payment request tells a Zcash wallet where to send funds, but does not
 - Exact-match payment observation with `txid:pool:output-index` identity.
 - Persistent sessions and consumed-payment ledger, across reloads.
 - Fail-closed expiry, ambiguity, reorg and replay handling.
+- Explicit separation of retryable/incomplete wallet evidence from genuine reorgs, with replacement
+  recovery after a confirmed reorg.
+- Atomic consumed-payment claims through a storage adapter capability; the reference browser uses
+  same-origin Web Locks and refuses to credit with plain `localStorage`.
 - V6-compatible Sapling memo hydration isolated in browser WASM.
 - Browser-only view-only merchant wallet with an optional locally passphrase-encrypted viewing profile, validated by security and reload smoke tests.
 - Documented on-chain testnet transaction, original SDK transitions and proof.
@@ -23,7 +27,7 @@ A ZIP-321 payment request tells a Zcash wallet where to send funds, but does not
 ## Verified versus not verified
 **Verified:** The October 11 testnet transfer and SDK `AWAITING_PAYMENT -> DETECTED -> CONFIRMING -> PAID` transition, persistence and duplicate-credit protection are recorded in LIVE_TESTNET_PROOF.md. Main-branch CI completed 77 tests and live-browser smoke, including real testnet wallet initialization, live gateway sync and ZIP-321 request creation. Production browser acceptance passed on desktop and mobile.
 
-**Not verified:** A newly funded shielded payment completing in the current public browser checkout; customer-facing wallet signing; autonomous off-browser server monitoring; production security of third-party wallet integrations. Simulation scenarios never move funds. The historical proof document is not a live payment feed.
+**Not verified:** A newly funded shielded payment completing in the current public browser checkout; customer-facing wallet signing; autonomous off-browser server monitoring; cross-device settlement without a shared transactional ledger; production security of third-party wallet integrations. Simulation scenarios never move funds. The historical proof document is not a live payment feed.
 
 ## Three-minute walkthrough outline
 0:00-0:25: Problem with payment requests versus verified receipts.

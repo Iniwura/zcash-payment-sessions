@@ -4,6 +4,7 @@ coverage/
 .deps/
 dist-demo/
 examples/checkout/public/webzjs-wallet/
+examples/checkout/public/sapling-hydrator/
 .env
 .env.*
 !.env.example

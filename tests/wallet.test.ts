@@ -120,7 +120,7 @@ describe("WebZjs wallet payment adapter", () => {
     ]);
   });
 
-  it("rejects unknown WebZjs payment status values", async () => {
+  it("reports unknown WebZjs payment status values as incomplete evidence", async () => {
     const wallet = {
       get_received_payments: async () => ({
         payments: [
@@ -140,9 +140,13 @@ describe("WebZjs wallet payment adapter", () => {
 
     const source = new WebZjsPaymentSource(wallet, 0);
 
-    await expect(source.list()).rejects.toThrow(
-      "Unknown WebZjs received payment status"
-    );
+    await expect(source.listDetailed()).resolves.toMatchObject({
+      payments: [],
+      issues: [{
+        kind: "INVALID_OBSERVATION",
+        paymentId: "tx-1842:orchard:0"
+      }]
+    });
   });
 
   it("releases the generated WebZjs response after mapping", async () => {

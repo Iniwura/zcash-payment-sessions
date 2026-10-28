@@ -47,11 +47,17 @@ export class ProductTour {
   private card: HTMLElement | null = null;
   private activeTarget: HTMLElement | null = null;
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
+  private previouslyFocused: HTMLElement | null = null;
 
   constructor(private steps: TourStep[] = TOUR_STEPS) {}
 
   public start(): void {
     this.currentStepIndex = 0;
+    if (this.overlay !== null) this.close();
+    this.previouslyFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     this.createDom();
     this.renderStep();
   }
@@ -85,11 +91,12 @@ export class ProductTour {
     this.card?.remove();
     this.overlay = null;
     this.card = null;
+    const focusTarget = this.previouslyFocused;
+    this.previouslyFocused = null;
+    focusTarget?.focus({ preventScroll: true });
   }
 
   private createDom(): void {
-    this.close();
-
     this.overlay = document.createElement("div");
     this.overlay.className = "tour-overlay";
     this.overlay.setAttribute("aria-hidden", "true");
@@ -108,6 +115,7 @@ export class ProductTour {
       if (e.key === "Escape") this.close();
       if (e.key === "ArrowRight") this.next();
       if (e.key === "ArrowLeft") this.prev();
+      if (e.key === "Tab") this.trapFocus(e);
     };
     window.addEventListener("keydown", this.keydownHandler);
   }
@@ -180,5 +188,29 @@ export class ProductTour {
     this.card
       .querySelector(".next-btn")
       ?.addEventListener("click", () => this.next());
+
+    (this.card.querySelector(".tour-close-btn") as HTMLElement | null)?.focus({
+      preventScroll: true
+    });
+  }
+
+  private trapFocus(event: KeyboardEvent): void {
+    if (this.card === null) return;
+
+    const focusable = [...this.card.querySelectorAll<HTMLElement>(
+      "button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])"
+    )];
+    if (focusable.length === 0) return;
+
+    const first = focusable[0]!;
+    const last = focusable[focusable.length - 1]!;
+    const active = document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 }

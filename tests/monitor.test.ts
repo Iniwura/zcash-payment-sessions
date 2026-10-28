@@ -23,6 +23,13 @@ class MemoryStorage implements KeyValueStorage {
   removeItem(key: string): void {
     this.values.delete(key);
   }
+
+  claimItem(key: string, owner: string): string | null {
+    const existing = this.values.get(key);
+    if (existing !== undefined) return existing;
+    this.values.set(key, owner);
+    return null;
+  }
 }
 
 const payment = (
@@ -51,7 +58,7 @@ function setup(requiredConfirmations = 2) {
 }
 
 describe("PaymentMonitor matching", () => {
-  it("detects an exact amount and memo match", () => {
+  it("detects an exact amount and memo match", async () => {
     const { sessions, monitor } = setup();
     const session = createPaymentSession({
       amountZatoshis: 25_000_000n,
@@ -59,13 +66,13 @@ describe("PaymentMonitor matching", () => {
     });
     sessions.save(session);
 
-    const result = monitor.observe(session.id, [payment()]);
+    const result = await monitor.observe(session.id, [payment()]);
 
     expect(result.outcome).toBe("EXACT");
     expect(sessions.load(session.id)?.status).toBe("DETECTED");
   });
 
-  it("does not satisfy a session with the wrong amount", () => {
+  it("does not satisfy a session with the wrong amount", async () => {
     const { sessions, monitor } = setup();
     const session = createPaymentSession({
       amountZatoshis: 25_000_000n,
@@ -73,7 +80,7 @@ describe("PaymentMonitor matching", () => {
     });
     sessions.save(session);
 
-    const result = monitor.observe(session.id, [
+    const result = await monitor.observe(session.id, [
       payment({ amountZatoshis: 24_999_999n })
     ]);
 
@@ -81,7 +88,7 @@ describe("PaymentMonitor matching", () => {
     expect(sessions.load(session.id)?.status).toBe("AWAITING_PAYMENT");
   });
 
-  it("does not satisfy a session with the wrong memo token", () => {
+  it("does not satisfy a session with the wrong memo token", async () => {
     const { sessions, monitor } = setup();
     const session = createPaymentSession({
       amountZatoshis: 25_000_000n,
@@ -89,7 +96,7 @@ describe("PaymentMonitor matching", () => {
     });
     sessions.save(session);
 
-    const result = monitor.observe(session.id, [
+    const result = await monitor.observe(session.id, [
       payment({ memo: "order-1843" })
     ]);
 
@@ -97,7 +104,7 @@ describe("PaymentMonitor matching", () => {
     expect(sessions.load(session.id)?.status).toBe("AWAITING_PAYMENT");
   });
 
-  it("does not let one payment satisfy two sessions", () => {
+  it("does not let one payment satisfy two sessions", async () => {
     const { sessions, monitor } = setup();
     const first = createPaymentSession({
       amountZatoshis: 25_000_000n,
@@ -110,14 +117,14 @@ describe("PaymentMonitor matching", () => {
     sessions.save(first);
     sessions.save(second);
 
-    expect(monitor.observe(first.id, [payment()]).outcome).toBe("EXACT");
-    expect(monitor.observe(second.id, [payment()]).outcome).toBe(
+    expect((await monitor.observe(first.id, [payment()])).outcome).toBe("EXACT");
+    expect((await monitor.observe(second.id, [payment()])).outcome).toBe(
       "ALREADY_CONSUMED"
     );
     expect(sessions.load(second.id)?.status).toBe("AWAITING_PAYMENT");
   });
 
-  it("returns AMBIGUOUS for multiple exact output candidates", () => {
+  it("returns AMBIGUOUS for multiple exact output candidates", async () => {
     const { sessions, monitor } = setup();
     const session = createPaymentSession({
       amountZatoshis: 25_000_000n,
@@ -125,7 +132,7 @@ describe("PaymentMonitor matching", () => {
     });
     sessions.save(session);
 
-    const result = monitor.observe(session.id, [
+    const result = await monitor.observe(session.id, [
       payment({ paymentId: "tx-a:orchard:0", txid: "tx-a" }),
       payment({ paymentId: "tx-b:orchard:1", txid: "tx-b" })
     ]);
@@ -136,7 +143,7 @@ describe("PaymentMonitor matching", () => {
 });
 
 describe("PaymentMonitor confirmation lifecycle", () => {
-  it("advances DETECTED to CONFIRMING and then PAID", () => {
+  it("advances DETECTED to CONFIRMING and then PAID", async () => {
     const { sessions, monitor } = setup(2);
     const session = createPaymentSession({
       amountZatoshis: 25_000_000n,
@@ -144,21 +151,21 @@ describe("PaymentMonitor confirmation lifecycle", () => {
     });
     sessions.save(session);
 
-    monitor.observe(session.id, [payment({ confirmations: 0 })]);
+    await monitor.observe(session.id, [payment({ confirmations: 0 })]);
     expect(sessions.load(session.id)?.status).toBe("DETECTED");
 
-    monitor.observe(session.id, [
+    await monitor.observe(session.id, [
       payment({ confirmations: 1, status: "MINED" })
     ]);
     expect(sessions.load(session.id)?.status).toBe("CONFIRMING");
 
-    monitor.observe(session.id, [
+    await monitor.observe(session.id, [
       payment({ confirmations: 2, status: "MINED" })
     ]);
     expect(sessions.load(session.id)?.status).toBe("PAID");
   });
 
-  it("repeated confirmation polling is idempotent after PAID", () => {
+  it("repeated confirmation polling is idempotent after PAID", async () => {
     const { sessions, monitor } = setup(2);
     const session = createPaymentSession({
       amountZatoshis: 25_000_000n,
@@ -166,15 +173,15 @@ describe("PaymentMonitor confirmation lifecycle", () => {
     });
     sessions.save(session);
 
-    monitor.observe(session.id, [payment()]);
-    monitor.observe(session.id, [
+    await monitor.observe(session.id, [payment()]);
+    await monitor.observe(session.id, [
       payment({ confirmations: 1, status: "MINED" })
     ]);
-    monitor.observe(session.id, [
+    await monitor.observe(session.id, [
       payment({ confirmations: 2, status: "MINED" })
     ]);
 
-    const repeated = monitor.observe(session.id, [
+    const repeated = await monitor.observe(session.id, [
       payment({ confirmations: 2, status: "MINED" })
     ]);
 
@@ -182,7 +189,7 @@ describe("PaymentMonitor confirmation lifecycle", () => {
     expect(sessions.load(session.id)?.status).toBe("PAID");
   });
 
-  it("marks a confirmed payment REORGED when it loses mined status", () => {
+  it("marks a confirmed payment REORGED when it loses mined status", async () => {
     const { sessions, monitor } = setup(2);
     const session = createPaymentSession({
       amountZatoshis: 25_000_000n,
@@ -190,15 +197,15 @@ describe("PaymentMonitor confirmation lifecycle", () => {
     });
     sessions.save(session);
 
-    monitor.observe(session.id, [payment()]);
-    monitor.observe(session.id, [
+    await monitor.observe(session.id, [payment()]);
+    await monitor.observe(session.id, [
       payment({ confirmations: 1, status: "MINED" })
     ]);
-    monitor.observe(session.id, [
+    await monitor.observe(session.id, [
       payment({ confirmations: 2, status: "MINED" })
     ]);
 
-    const reorged = monitor.observe(session.id, [
+    const reorged = await monitor.observe(session.id, [
       payment({ confirmations: 0, status: "REORGED" })
     ]);
 
@@ -206,14 +213,14 @@ describe("PaymentMonitor confirmation lifecycle", () => {
     expect(sessions.load(session.id)?.status).toBe("REORGED");
   });
 
-  it("keeps the consumed payment and confirmation state across recreation", () => {
+  it("keeps the consumed payment and confirmation state across recreation", async () => {
     const { storage, sessions, monitor } = setup(2);
     const session = createPaymentSession({
       amountZatoshis: 25_000_000n,
       memo: "order-1842"
     });
     sessions.save(session);
-    monitor.observe(session.id, [payment()]);
+    await monitor.observe(session.id, [payment()]);
 
     const recreatedSessions = new PaymentSessionStore(storage);
     const recreatedMonitor = new PaymentMonitor(
@@ -222,14 +229,14 @@ describe("PaymentMonitor confirmation lifecycle", () => {
       { requiredConfirmations: 2 }
     );
 
-    recreatedMonitor.observe(session.id, [
+    await recreatedMonitor.observe(session.id, [
       payment({ confirmations: 1, status: "MINED" })
     ]);
 
     expect(recreatedSessions.load(session.id)?.status).toBe("CONFIRMING");
   });
 
-  it("does not revive an expired session when a late payment appears", () => {
+  it("does not revive an expired session when a late payment appears", async () => {
     const { storage, sessions } = setup();
     const session = createPaymentSession({
       amountZatoshis: 25_000_000n,
@@ -244,7 +251,7 @@ describe("PaymentMonitor confirmation lifecycle", () => {
     );
     const monitor = new PaymentMonitor(expiredSessions, storage);
 
-    expect(monitor.observe(session.id, [payment()]).outcome).toBe("NO_MATCH");
+    expect((await monitor.observe(session.id, [payment()])).outcome).toBe("NO_MATCH");
     expect(expiredSessions.load(session.id)?.status).toBe("EXPIRED");
   });
 });

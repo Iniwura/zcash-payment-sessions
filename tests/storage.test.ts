@@ -19,6 +19,13 @@ class MemoryStorage implements KeyValueStorage {
   removeItem(key: string): void {
     this.values.delete(key);
   }
+
+  claimItem(key: string, owner: string): string | null {
+    const existing = this.values.get(key);
+    if (existing !== undefined) return existing;
+    this.values.set(key, owner);
+    return null;
+  }
 }
 
 describe("PaymentSessionStore", () => {
@@ -84,5 +91,14 @@ describe("PaymentSessionStore", () => {
     store.remove(session.id);
 
     expect(store.load(session.id)).toBeNull();
+  });
+
+  it("quarantines a corrupted persisted session by returning null", () => {
+    const storage = new MemoryStorage();
+    const store = new PaymentSessionStore(storage);
+    storage.setItem("zcash-payment-session:corrupt", "not-json");
+
+    expect(store.load("corrupt")).toBeNull();
+    expect(storage.getItem("zcash-payment-session:corrupt")).toBeNull();
   });
 });
