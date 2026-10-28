@@ -104,13 +104,17 @@ transactional ledger when crediting across devices.
 ## Release record
 
 - Release-candidate commits: `8b7f789` (`fix(core): harden payment observation recovery`),
-  `aa0c9f7` (`docs: record remediation release candidate evidence`), and `1cc44c6`
-  (`test: normalize remediation fixture`).
-- Local validation: 16 test files / 95 tests, typecheck, SDK build, consumer smoke,
+  `aa0c9f7` (`docs: record remediation release candidate evidence`), `1cc44c6`
+  (`test: normalize remediation fixture`), `29f185f` (`docs: include final remediation commit
+  record`), `7de0c16` (`ci: run remediation checks on pull requests`), and `86d1ba1`
+  (`test: cover claim adapter failure`).
+- Local validation: 16 test files / 96 tests, typecheck, SDK build, consumer smoke,
   reproducibility, demo typecheck/build, dependency audit, gateway checks, simulation browser
   acceptance, responsive checks, and read-only real testnet browser synchronization all passed on
   2026-10-28. The real testnet smoke observed canonical tip `4549174` and did not send funds.
-- CI: not run from this unpushed local branch.
+- CI: PR #3 workflows passed on final head `86d1ba1`: runs 17 and 15 for the two full WebZjs
+  integrations, and run 16 for merchant-profile security smoke. The Vercel check passed by
+  intentionally skipping the non-`vercel-static` preview; no production deployment was performed.
 - Deployment: not performed. Stable `main` and the historical proof remain unchanged.
 - Merge/submission: not performed; requires review and CI from the branch first.
 - Remaining release limitations: a newly funded public-checkout payment is not newly verified;
