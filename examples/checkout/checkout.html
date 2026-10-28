@@ -112,6 +112,9 @@
       <div id="checkout">
                 <div class="checkout-frame">
           <div class="checkout-frame-top mono"><div><span class="frame-dots" aria-hidden="true">● ● ●</span> ZPS / MERCHANT TERMINAL</div><span>REQUEST / OBSERVE / VERIFY</span></div>
+          <nav class="terminal-process mono" aria-label="Checkout sequence">
+            <span><b>01</b> ORDER</span><span><b>02</b> CONFIGURE</span><span><b>03</b> REQUEST</span><span><b>04</b> VERIFY</span>
+          </nav>
           <div class="checkout-grid">
             <section class="checkout-card" aria-labelledby="request-title">
               <div class="card-heading">
@@ -129,7 +132,8 @@
                   <span class="qr-corner qr-corner-br" aria-hidden="true"></span>
                   <div id="qr-frame" class="qr-frame" aria-label="Scannable payment request QR code"><div class="qr-empty"><span class="qr-mark">↗</span><span>Your payment request<br />appears here</span></div></div>
                 </div>
-                <div class="qr-stage-footer mono"><span id="qr-instrument-state">AWAITING REQUEST</span><span>SCAN WITH ZCASH WALLET</span></div>
+                <div class="qr-stage-footer mono"><span id="qr-instrument-state">AWAITING REQUEST</span><span id="qr-instrument-action">SCAN WITH ZCASH WALLET</span></div>
+                <a id="qr-receipt-link" href="#receipt-panel" class="qr-receipt-link hidden mono">SESSION PAID / VIEW THE RECEIPT <span aria-hidden="true">↓</span></a>
               </div>
               <label class="field-label" for="uri-display">ZIP-321 REQUEST URI</label>
               <div class="uri-row"><textarea id="uri-display" readonly rows="3" spellcheck="false" aria-label="Generated ZIP-321 request URI"></textarea><button id="copy-uri" class="button button-secondary" type="button" disabled>Copy ↗</button></div>
