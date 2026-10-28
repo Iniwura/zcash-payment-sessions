@@ -56,6 +56,8 @@ describe("editorial checkout interface contract", () => {
     expect(checkoutHtml).toContain("<h1 class=\"sr-only\">");
     expect(vercel).toContain("Content-Security-Policy");
     expect(vercel).toContain("script-src 'self' 'wasm-unsafe-eval'");
+    expect(vercel).toContain('"source": "/webzjs-wallet/"');
+    expect(vercel).toContain('"destination": "/webzjs-wallet/webzjs_wallet.js"');
     expect(vercel).toContain("connect-src 'self' https:");
     expect(vercel).toContain("worker-src 'self' blob:");
     expect(tour).toContain("this.trapFocus(e)");
