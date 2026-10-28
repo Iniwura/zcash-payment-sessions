@@ -46,7 +46,6 @@ const observedPayment = (
   pool: "orchard",
   ...overrides
 });
-
 function setup() {
   const storage = new AtomicMemoryStorage();
   const sessions = new PaymentSessionStore(storage);
@@ -349,4 +348,3 @@ describe("hydration failure classification", () => {
     ]);
   });
 });
-
